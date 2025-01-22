@@ -3,7 +3,7 @@
 #include <lib/base/init_num.h>
 #include <lib/gdi/grc.h>
 
-DEFINE_REF(eGLSAnimation);
+//DEFINE_REF(eGLSAnimation);
 
 eGLSAnimation::eGLSAnimation(eWidget *widget)
     : m_widget(widget)
