@@ -6,11 +6,11 @@
 DEFINE_REF(eGLSAnimation);
 
 eGLSAnimation::eGLSAnimation(eWidget *widget)
-    : m_timer(eTimer::create(eApp))
-    , m_widget(widget)
-    , m_currentStep(0)
-    , m_totalSteps(0)
-    , m_isRunning(false)
+    : m_widget(widget)
+    , m_timer(eTimer::create(eApp))
+    , m_current_tick(0)
+    , m_total_ticks(0)
+    , m_active(false)
 #ifdef HAVE_MALI
     , m_eglDisplay(EGL_NO_DISPLAY)
     , m_eglContext(EGL_NO_CONTEXT)
@@ -19,7 +19,7 @@ eGLSAnimation::eGLSAnimation(eWidget *widget)
     , m_texture(0)
 #endif
 {
-    m_timer->timeout.connect(this, &eGLSAnimation::step);
+    CONNECT(m_timer->timeout, eGLSAnimation::tick);
 #ifdef HAVE_MALI
     initEGL();
 #endif
@@ -35,52 +35,52 @@ eGLSAnimation::~eGLSAnimation()
 
 void eGLSAnimation::start(const AnimationParams &params)
 {
-    if (m_isRunning)
+    if (m_active)
         stop();
 
     m_params = params;
-    m_currentStep = 0;
-    m_totalSteps = params.duration / 16; // ~60fps
-    m_isRunning = true;
+    m_current_tick = 0;
+    m_total_ticks = params.duration / 16; // ~60fps
+    m_active = true;
 
-    m_timer->start(16, true); // 16ms for ~60fps
+    m_timer->start(16); // 16ms for ~60fps
 }
 
 void eGLSAnimation::stop()
 {
-    if (m_isRunning)
+    if (m_active)
     {
         m_timer->stop();
-        m_isRunning = false;
-        m_currentStep = 0;
+        m_active = false;
+        m_current_tick = 0;
     }
 }
 
 void eGLSAnimation::pause()
 {
-    if (m_isRunning)
+    if (m_active)
     {
         m_timer->stop();
-        m_isRunning = false;
+        m_active = false;
     }
 }
 
 void eGLSAnimation::resume()
 {
-    if (!m_isRunning && m_currentStep < m_totalSteps)
+    if (!m_active && m_current_tick < m_total_ticks)
     {
-        m_timer->start(16, true);
-        m_isRunning = true;
+        m_timer->start(16);
+        m_active = true;
     }
 }
 
-void eGLSAnimation::step()
+void eGLSAnimation::tick()
 {
-    if (!m_isRunning || !m_widget)
+    if (!m_active || !m_widget)
         return;
 
-    m_currentStep++;
-    float progress = static_cast<float>(m_currentStep) / m_totalSteps;
+    m_current_tick++;
+    float progress = static_cast<float>(m_current_tick) / m_total_ticks;
 
     switch (m_params.type)
     {
@@ -95,19 +95,21 @@ void eGLSAnimation::step()
             break;
     }
 
-    if (m_currentStep >= m_totalSteps)
+    if (m_current_tick >= m_total_ticks)
     {
         stop();
         return;
     }
 
-    m_timer->start(16, true);
+    m_timer->start(16);
 }
 
 void eGLSAnimation::applyFade(float progress)
 {
     int currentValue = m_params.startValue + (m_params.endValue - m_params.startValue) * progress;
-    m_widget->setAlpha(currentValue);
+    // Instead of setAlpha, we'll use setBackgroundColor with alpha
+    gRGB color(0, 0, 0, currentValue);
+    m_widget->setBackgroundColor(color);
 }
 
 void eGLSAnimation::applySlide(float progress)
