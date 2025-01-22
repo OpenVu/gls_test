@@ -195,14 +195,16 @@ struct gOpcode
 		} *setOffset;
 
 		struct {
-			int alpha;
-		} alpha;
-		struct {
-			ePoint position;
-		} position;
-		struct {
-			float scale;
-		} scale;
+	            int alpha_value;
+	        } set_alpha;
+	        
+	        struct {
+	            ePoint pos;
+	        } set_position;
+	        
+	        struct {
+	            float scale_factor;
+	        } set_scale;
 
 		gCompositingData *setCompositing;
 
