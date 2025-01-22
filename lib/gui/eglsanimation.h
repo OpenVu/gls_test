@@ -18,43 +18,50 @@ typedef void* EGLConfig;
 typedef unsigned int GLuint;
 #endif
 
+enum eGLSAnimationType {
+    TYPE_FADE,
+    TYPE_SLIDE,
+    TYPE_ZOOM
+};
+
+struct eGLSAnimationParams {
+    eGLSAnimationType type;
+    int startValue;
+    int endValue;
+    int duration;  // in milliseconds
+    ePoint startPos;
+    ePoint endPos;
+    ePoint center;
+    
+    eGLSAnimationParams() : 
+        type(TYPE_FADE),
+        startValue(0),
+        endValue(100),
+        duration(500) {}
+};
+
 class eGLSAnimation : public iObject
 {
     DECLARE_REF(eGLSAnimation);
 
 public:
-    enum AnimationType {
-        TYPE_FADE,
-        TYPE_SLIDE,
-        TYPE_ZOOM
-    };
-
-    struct AnimationParams {
-        AnimationType type;
-        int startValue;
-        int endValue;
-        int duration;  // in milliseconds
-        ePoint startPos;
-        ePoint endPos;
-        ePoint center;
-    };
-
     eGLSAnimation(eWidget *widget);
     virtual ~eGLSAnimation();
 
-    void start(const AnimationParams &params);
+    void start(const eGLSAnimationParams &params);
     void stop();
     void pause();
     void resume();
     void tick();
 
     bool isRunning() const { return m_active; }
+
     PSignal0<void> animationFinished;
 
 private:
     eWidget *m_widget;
     ePtr<eTimer> m_timer;
-    AnimationParams m_params;
+    eGLSAnimationParams m_params;
     int m_current_tick;
     int m_total_ticks;
     bool m_active;
