@@ -7,10 +7,10 @@ DEFINE_REF(eGLSAnimation);
 
 eGLSAnimation::eGLSAnimation(eWidget *widget)
     : m_widget(widget)
-    , m_timer(eTimer::create(eApp))
+    , m_active(false)
     , m_current_tick(0)
     , m_total_ticks(0)
-    , m_active(false)
+    , m_timer(eTimer::create(eApp))
 #ifdef HAVE_MALI
     , m_eglDisplay(EGL_NO_DISPLAY)
     , m_eglContext(EGL_NO_CONTEXT)
@@ -33,18 +33,18 @@ eGLSAnimation::eGLSAnimation(eWidget *widget)
 #endif
 }
 
-void eGLSAnimation::timerTick()
-{
-    eDebug("[eGLSAnimation] Timer tick");
-    tick();
-}
-
 eGLSAnimation::~eGLSAnimation()
 {
 #ifdef HAVE_MALI
     cleanupEGL();
 #endif
     stop();
+}
+
+void eGLSAnimation::timerTick()
+{
+    eDebug("[eGLSAnimation] Timer tick");
+    tick();
 }
 
 void eGLSAnimation::start(const eGLSAnimationParams &params)
