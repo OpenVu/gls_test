@@ -112,8 +112,7 @@ void eGLSAnimation::tick()
 void eGLSAnimation::applyFade(float progress)
 {
     int opacity = m_params.startValue + (m_params.endValue - m_params.startValue) * progress;
-    gRGB color(0, 0, 0, opacity);
-    m_widget->setBackgroundColor(color);
+    m_widget->setTransparent(100 - opacity);  // Convert opacity to transparency (0-100)
 }
 
 void eGLSAnimation::applySlide(float progress)
@@ -121,6 +120,10 @@ void eGLSAnimation::applySlide(float progress)
     int x = m_params.startPos.x() + (m_params.endPos.x() - m_params.startPos.x()) * progress;
     int y = m_params.startPos.y() + (m_params.endPos.y() - m_params.startPos.y()) * progress;
     m_widget->move(ePoint(x, y));
+    
+    // Ensure widget is visible during slide
+    if (m_current_tick == 1)
+        m_widget->setTransparent(0);
 }
 
 void eGLSAnimation::applyZoom(float progress)
@@ -148,6 +151,10 @@ void eGLSAnimation::applyZoom(float progress)
     
     m_widget->resize(eSize(newWidth, newHeight));
     m_widget->move(ePoint(newX, newY));
+    
+    // Ensure widget is visible during zoom
+    if (m_current_tick == 1)
+        m_widget->setTransparent(0);
 }
 
 #ifdef HAVE_MALI
