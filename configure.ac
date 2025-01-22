@@ -238,6 +238,14 @@ AC_CHECK_HEADERS([shadow.h])
 AC_CHECK_LIB([crypt], [crypt], [BASE_LIBS+=" -lcrypt"], [AC_MSG_ERROR([Could not find crypt])])
 AC_CHECK_LIB([rt], [clock_gettime], [BASE_LIBS+=" -lrt"], [AC_MSG_ERROR([Could not find rt])])
 
+AC_MSG_CHECKING([for Mali EGL/GLES support])
+AC_CHECK_LIB([EGL], [eglGetDisplay], [
+    AC_CHECK_LIB([GLESv2], [glCreateShader], [
+        AC_DEFINE([HAVE_MALI], [1], [Define if Mali EGL/GLES is available])
+        LIBS="$LIBS -lEGL -lGLESv2"
+    ])
+])
+
 ENIGMA2_CFLAGS="-fno-rtti -fno-exceptions -rdynamic -funwind-tables"
 AC_SUBST(ENIGMA2_CFLAGS)
 
