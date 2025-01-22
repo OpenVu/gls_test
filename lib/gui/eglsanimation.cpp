@@ -1,5 +1,5 @@
 #include "eglsanimation.h"
-#include <lib/base/etimer.h>
+#include <lib/base/ebase.h>
 #include <lib/gui/ewidget.h>
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
