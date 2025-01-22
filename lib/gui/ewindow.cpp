@@ -11,6 +11,7 @@ eWindow::eWindow(eWidgetDesktop *desktop, int z): eWidget(0)
 {
 	m_flags = 0;
 	m_desktop = desktop;
+	m_animation = nullptr;
 		/* ask style manager for current style */
 	ePtr<eWindowStyleManager> mgr;
 	eWindowStyleManager::getInstance(mgr);
@@ -78,24 +79,28 @@ void eWindow::setAnimation(eGLSAnimation::AnimationType type, int duration)
     eGLSAnimation::AnimationParams params;
     params.type = type;
     params.duration = duration;
-
+    
     switch (type)
     {
         case eGLSAnimation::TYPE_FADE:
             params.startValue = 0;
-            params.endValue = 255;
+            params.endValue = 100;
             break;
+            
         case eGLSAnimation::TYPE_SLIDE:
-            params.startPos = ePoint(size().width(), position().y());
-            params.endPos = position();
+            {
+                ePoint current = position();
+                params.startPos = ePoint(current.x() - 100, current.y());
+                params.endPos = current;
+            }
             break;
+            
         case eGLSAnimation::TYPE_ZOOM:
-            params.startValue = 50;  // Start at 50% size
-            params.endValue = 100;   // End at 100% size
-            params.center = ePoint(size().width()/2, size().height()/2);
+            params.startValue = 50;
+            params.endValue = 100;
             break;
     }
-
+    
     m_animation->start(params);
 }
 
@@ -151,11 +156,4 @@ int eWindow::event(int event, void *data, void *data2)
 		break;
 	}
 	return eWidget::event(event, data, data2);
-}
-
-void eWindow::setCornerRadius(int radius, int edges)
-{
-	/* set corner radius for child, too */
-	eWidget::setCornerRadius(radius, edges);
-	m_child->setCornerRadius(radius, edges);
 }
