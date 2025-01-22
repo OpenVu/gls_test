@@ -265,6 +265,19 @@ typedef long time_t;
 %include <lib/gdi/picload.h>
 %include <lib/dvb/fcc.h>
 %include <lib/dvb/streamserver.h>
+
+// Animation types
+//%include <lib/gui/eglsanimation.h>
+
+// Make animation types available to Python
+//%immutable eGLSAnimation::animationFinished;
+
+// Allow Python to use AnimationParams
+%extend eGLSAnimationParams {
+    eGLSAnimationParams() {
+        return new eGLSAnimationParams();
+    }
+}
 /**************  eptr  **************/
 
 /**************  signals  **************/
