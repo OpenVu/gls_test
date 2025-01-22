@@ -5,6 +5,7 @@
 #include <lib/gui/ewindowstyleskinned.h>
 
 #include <lib/gdi/epng.h>
+#include <lib/gui/eglsanimation.h>
 
 eWindow::eWindow(eWidgetDesktop *desktop, int z): eWidget(0)
 {
@@ -67,6 +68,44 @@ void eWindow::setFlag(int flags)
 void eWindow::clearFlag(int flags)
 {
 	m_flags &= ~flags;
+}
+
+void eWindow::setAnimation(eGLSAnimation::AnimationType type, int duration)
+{
+    if (!m_animation)
+        m_animation = new eGLSAnimation(this);
+
+    eGLSAnimation::AnimationParams params;
+    params.type = type;
+    params.duration = duration;
+
+    switch (type)
+    {
+        case eGLSAnimation::TYPE_FADE:
+            params.startValue = 0;
+            params.endValue = 255;
+            break;
+        case eGLSAnimation::TYPE_SLIDE:
+            params.startPos = ePoint(size().width(), position().y());
+            params.endPos = position();
+            break;
+        case eGLSAnimation::TYPE_ZOOM:
+            params.startValue = 50;  // Start at 50% size
+            params.endValue = 100;   // End at 100% size
+            params.center = ePoint(size().width()/2, size().height()/2);
+            break;
+    }
+
+    m_animation->start(params);
+}
+
+void eWindow::clearAnimation()
+{
+    if (m_animation)
+    {
+        m_animation->stop();
+        m_animation = nullptr;
+    }
 }
 
 int eWindow::event(int event, void *data, void *data2)
