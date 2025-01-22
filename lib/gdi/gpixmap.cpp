@@ -2179,6 +2179,65 @@ void gPixmap::blit(const gPixmap &src, const eRect &_pos, const gRegion &clip, i
 
 #undef FIX
 
+void gPixmap::setAlpha(int alpha)
+{
+    if (!surface)
+        return;
+        
+    if (surface->bpp != 32)
+        return;
+        
+    uint8_t *srcptr = (uint8_t*)surface->data;
+    for (int y = 0; y < surface->y; ++y)
+    {
+        for (int x = 0; x < surface->x; ++x)
+        {
+            srcptr[3] = alpha;
+            srcptr += 4;
+        }
+    }
+}
+
+void gPixmap::move(const ePoint &pos)
+{
+    m_position = pos;
+    // The actual movement is handled by the compositor/window manager
+}
+
+void gPixmap::resize(const eSize &size)
+{
+    if (!surface || size == eSize(surface->x, surface->y))
+        return;
+        
+    // Create new surface with desired size
+    gSurface *new_surface = new gSurface(size.width(), size.height(), surface->bpp);
+    
+    // Copy and scale content
+    int old_stride = surface->stride;
+    int new_stride = new_surface->stride;
+    uint8_t *src = (uint8_t*)surface->data;
+    uint8_t *dst = (uint8_t*)new_surface->data;
+    
+    for (int y = 0; y < new_surface->y; ++y)
+    {
+        int src_y = (y * surface->y) / new_surface->y;
+        uint8_t *src_line = src + src_y * old_stride;
+        uint8_t *dst_line = dst + y * new_stride;
+        
+        for (int x = 0; x < new_surface->x; ++x)
+        {
+            int src_x = (x * surface->x) / new_surface->x;
+            memcpy(dst_line + x * (surface->bpp/8), 
+                  src_line + src_x * (surface->bpp/8), 
+                  surface->bpp/8);
+        }
+    }
+    
+    // Replace old surface
+    delete surface;
+    surface = new_surface;
+}
+
 void gPixmap::mergePalette(const gPixmap &target)
 {
 	if (surface->clut.colors <= 0 || target.surface->clut.colors <= 0)
