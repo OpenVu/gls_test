@@ -79,6 +79,9 @@ struct gOpcode
 		setCompositing,
 		sendShow,
 		sendHide,
+		glsSetAlpha,
+		glsSetPosition,
+		glsSetScale,
 #ifdef USE_LIBVUGLES2
 		sendShowItem,
 		setFlush,
