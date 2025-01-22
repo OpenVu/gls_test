@@ -266,11 +266,15 @@ typedef long time_t;
 %include <lib/dvb/fcc.h>
 %include <lib/dvb/streamserver.h>
 
-// Animation types
-//%include <lib/gui/eglsanimation.h>
+// Animation types and parameters
+%{
+#include <lib/gui/eglsanimation.h>
+%}
 
-// Make animation types available to Python
-//%immutable eGLSAnimation::animationFinished;
+// Make the enum values available as constants
+%constant int TYPE_FADE = TYPE_FADE;
+%constant int TYPE_SLIDE = TYPE_SLIDE;
+%constant int TYPE_ZOOM = TYPE_ZOOM;
 
 // Allow Python to use AnimationParams
 %extend eGLSAnimationParams {
