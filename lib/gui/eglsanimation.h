@@ -1,8 +1,8 @@
 #ifndef __lib_gui_eglsanimation_h
 #define __lib_gui_eglsanimation_h
 
-#include <lib/base/object.h>
 #include <lib/base/ebase.h>
+#include <lib/base/object.h>
 #include <lib/gdi/gpixmap.h>
 #include <lib/gui/ewidget.h>
 
@@ -18,7 +18,7 @@ typedef void* EGLConfig;
 typedef unsigned int GLuint;
 #endif
 
-class eGLSAnimation : public Object
+class eGLSAnimation : public iObject
 {
     DECLARE_REF(eGLSAnimation);
 
