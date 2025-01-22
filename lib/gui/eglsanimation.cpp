@@ -19,10 +19,24 @@ eGLSAnimation::eGLSAnimation(eWidget *widget)
     , m_texture(0)
 #endif
 {
-    CONNECT(m_timer->timeout, eGLSAnimation::tick);
+    eDebug("[eGLSAnimation] Constructor: widget=%p", widget);
+    if (!m_timer) {
+        eDebug("[eGLSAnimation] Failed to create timer!");
+        return;
+    }
+    
+    m_timer->timeout.connect(sigc::mem_fun(*this, &eGLSAnimation::timerTick));
+    eDebug("[eGLSAnimation] Timer connected");
+    
 #ifdef HAVE_MALI
     initEGL();
 #endif
+}
+
+void eGLSAnimation::timerTick()
+{
+    eDebug("[eGLSAnimation] Timer tick");
+    tick();
 }
 
 eGLSAnimation::~eGLSAnimation()
@@ -38,8 +52,20 @@ void eGLSAnimation::start(const eGLSAnimationParams &params)
     eDebug("[eGLSAnimation] Starting animation type=%d, duration=%d, startValue=%d, endValue=%d",
            params.type, params.duration, params.startValue, params.endValue);
            
-    if (m_active)
+    if (!m_timer) {
+        eDebug("[eGLSAnimation] No timer available!");
+        return;
+    }
+    
+    if (!m_widget) {
+        eDebug("[eGLSAnimation] No widget available!");
+        return;
+    }
+           
+    if (m_active) {
+        eDebug("[eGLSAnimation] Stopping previous animation");
         stop();
+    }
 
     m_params = params;
     m_current_tick = 0;
@@ -47,15 +73,20 @@ void eGLSAnimation::start(const eGLSAnimationParams &params)
     m_active = true;
     
     // Start timer for animation updates
-    m_timer->start(16);  // ~60fps
-    eDebug("[eGLSAnimation] Timer started, total_ticks=%d", m_total_ticks);
+    eDebug("[eGLSAnimation] Starting timer with interval=16ms, total_ticks=%d", m_total_ticks);
+    m_timer->startLongTimer(0);  // Start immediately
+    eDebug("[eGLSAnimation] Timer started");
 }
 
 void eGLSAnimation::stop()
 {
     if (m_active)
     {
-        m_timer->stop();
+        eDebug("[eGLSAnimation] Stopping animation");
+        if (m_timer) {
+            m_timer->stop();
+            eDebug("[eGLSAnimation] Timer stopped");
+        }
         m_active = false;
         m_current_tick = 0;
     }
@@ -65,6 +96,7 @@ void eGLSAnimation::pause()
 {
     if (m_active)
     {
+        eDebug("[eGLSAnimation] Pausing animation");
         m_timer->stop();
         m_active = false;
     }
@@ -74,7 +106,8 @@ void eGLSAnimation::resume()
 {
     if (!m_active && m_current_tick < m_total_ticks)
     {
-        m_timer->start(16);
+        eDebug("[eGLSAnimation] Resuming animation");
+        m_timer->startLongTimer(0);
         m_active = true;
     }
 }
@@ -115,8 +148,9 @@ void eGLSAnimation::tick()
         animationFinished();
         return;
     }
-
-    m_timer->start(16);
+    
+    // Schedule next tick
+    m_timer->startLongTimer(0);
 }
 
 void eGLSAnimation::applyFade(float progress)
