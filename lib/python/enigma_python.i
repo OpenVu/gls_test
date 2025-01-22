@@ -56,6 +56,7 @@ is usually caused by not marking PSignals as immutable.
 #include <lib/gdi/grc.h>
 #include <lib/gdi/gmaindc.h>
 #include <lib/gui/ewidget.h>
+#include <lib/gui/eglsanimation.h>
 #include <lib/gui/elabel.h>
 #include <lib/gui/einput.h>
 #include <lib/gui/einputstring.h>
@@ -197,6 +198,7 @@ typedef long time_t;
 %immutable eTuxtxtApp::appClosed;
 %immutable iDVBChannel::receivedTsidOnid;
 %immutable eDVBSatelliteEquipmentControl::slotRotorSatPosChanged;
+%immutable eGLSAnimation::animationFinished;
 %include <lib/base/message.h>
 %include <lib/driver/rc.h>
 %include <lib/driver/rcinput_swig.h>
@@ -208,6 +210,7 @@ typedef long time_t;
 %include <lib/gdi/erect.h>
 %include <lib/gdi/esize.h>
 %include <lib/gui/ewidget.h>
+%include <lib/gui/eglsanimation.h>
 %include <lib/gui/elabel.h>
 %include <lib/gui/einput.h>
 %include <lib/gui/einputstring.h>
