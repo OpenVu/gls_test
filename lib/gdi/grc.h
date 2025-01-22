@@ -194,6 +194,16 @@ struct gOpcode
 			int rel;
 		} *setOffset;
 
+		struct {
+			int alpha;
+		} alpha;
+		struct {
+			ePoint position;
+		} position;
+		struct {
+			float scale;
+		} scale;
+
 		gCompositingData *setCompositing;
 
 		struct psetShowHideInfo
