@@ -16,66 +16,27 @@ eGLSAnimation::eGLSAnimation(eWidget *widget)
     , m_currentStep(0)
     , m_totalSteps(0)
     , m_isRunning(false)
+#ifdef HAVE_MALI
+    , m_display(EGL_NO_DISPLAY)
+    , m_surface(EGL_NO_SURFACE)
+    , m_context(EGL_NO_CONTEXT)
+    , m_program(0)
+    , m_texture(0)
+#endif
 {
     m_timer = eTimer::create(eApp);
     CONNECT(m_timer->timeout, eGLSAnimation::step);
 
 #ifdef HAVE_MALI
-    // Initialize Mali EGL
-    EGLint majorVersion;
-    EGLint minorVersion;
-    EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-    
-    if (display == EGL_NO_DISPLAY) {
-        eDebug("[eGLSAnimation] Failed to get EGL display");
-        return;
-    }
-    
-    if (!eglInitialize(display, &majorVersion, &minorVersion)) {
-        eDebug("[eGLSAnimation] Failed to initialize EGL");
-        return;
-    }
-    
-    // Configure EGL
-    EGLint configAttribs[] = {
-        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
-        EGL_RED_SIZE, 8,
-        EGL_GREEN_SIZE, 8,
-        EGL_BLUE_SIZE, 8,
-        EGL_ALPHA_SIZE, 8,
-        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
-        EGL_NONE
-    };
-    
-    EGLConfig config;
-    EGLint numConfigs;
-    if (!eglChooseConfig(display, configAttribs, &config, 1, &numConfigs)) {
-        eDebug("[eGLSAnimation] Failed to choose EGL config");
-        return;
-    }
-    
-    // Create EGL context
-    EGLint contextAttribs[] = {
-        EGL_CONTEXT_CLIENT_VERSION, 2,
-        EGL_NONE
-    };
-    
-    EGLContext context = eglCreateContext(display, config, EGL_NO_CONTEXT, contextAttribs);
-    if (context == EGL_NO_CONTEXT) {
-        eDebug("[eGLSAnimation] Failed to create EGL context");
-        return;
-    }
-    
-    // Store EGL objects
-    m_eglDisplay = display;
-    m_eglConfig = config;
-    m_eglContext = context;
+    initEGL();
 #endif
 }
 
 eGLSAnimation::~eGLSAnimation()
 {
-    stop();
+#ifdef HAVE_MALI
+    cleanupEGL();
+#endif
 }
 
 void eGLSAnimation::start(const AnimationParams &params)
@@ -181,3 +142,112 @@ void eGLSAnimation::applyZoom(float progress)
     m_widget->resize(eSize(newWidth, newHeight));
     m_widget->move(ePoint(newX, newY));
 }
+
+#ifdef HAVE_MALI
+bool eGLSAnimation::initEGL()
+{
+    m_display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    if (m_display == EGL_NO_DISPLAY)
+        return false;
+
+    EGLint major, minor;
+    if (!eglInitialize(m_display, &major, &minor))
+        return false;
+
+    const EGLint configAttribs[] = {
+        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+        EGL_RED_SIZE, 8,
+        EGL_GREEN_SIZE, 8,
+        EGL_BLUE_SIZE, 8,
+        EGL_ALPHA_SIZE, 8,
+        EGL_NONE
+    };
+
+    EGLConfig config;
+    EGLint numConfigs;
+    if (!eglChooseConfig(m_display, configAttribs, &config, 1, &numConfigs))
+        return false;
+
+    const EGLint contextAttribs[] = {
+        EGL_CONTEXT_CLIENT_VERSION, 2,
+        EGL_NONE
+    };
+
+    m_context = eglCreateContext(m_display, config, EGL_NO_CONTEXT, contextAttribs);
+    if (m_context == EGL_NO_CONTEXT)
+        return false;
+
+    return createShaders();
+}
+
+void eGLSAnimation::cleanupEGL()
+{
+    if (m_display != EGL_NO_DISPLAY)
+    {
+        if (m_context != EGL_NO_CONTEXT)
+        {
+            eglDestroyContext(m_display, m_context);
+            m_context = EGL_NO_CONTEXT;
+        }
+        if (m_surface != EGL_NO_SURFACE)
+        {
+            eglDestroySurface(m_display, m_surface);
+            m_surface = EGL_NO_SURFACE;
+        }
+        eglTerminate(m_display);
+        m_display = EGL_NO_DISPLAY;
+    }
+
+    if (m_program)
+    {
+        glDeleteProgram(m_program);
+        m_program = 0;
+    }
+    if (m_texture)
+    {
+        glDeleteTextures(1, &m_texture);
+        m_texture = 0;
+    }
+}
+
+bool eGLSAnimation::createShaders()
+{
+    const char *vertexShader =
+        "attribute vec4 position;\n"
+        "attribute vec2 texcoord;\n"
+        "varying vec2 v_texcoord;\n"
+        "void main() {\n"
+        "    gl_Position = position;\n"
+        "    v_texcoord = texcoord;\n"
+        "}\n";
+
+    const char *fragmentShader =
+        "precision mediump float;\n"
+        "varying vec2 v_texcoord;\n"
+        "uniform sampler2D texture;\n"
+        "uniform float alpha;\n"
+        "void main() {\n"
+        "    vec4 color = texture2D(texture, v_texcoord);\n"
+        "    gl_FragColor = vec4(color.rgb, color.a * alpha);\n"
+        "}\n";
+
+    GLuint vs = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vs, 1, &vertexShader, NULL);
+    glCompileShader(vs);
+
+    GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fs, 1, &fragmentShader, NULL);
+    glCompileShader(fs);
+
+    m_program = glCreateProgram();
+    glAttachShader(m_program, vs);
+    glAttachShader(m_program, fs);
+    glLinkProgram(m_program);
+
+    glDeleteShader(vs);
+    glDeleteShader(fs);
+
+    return true;
+}
+#endif
