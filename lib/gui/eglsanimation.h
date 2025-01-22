@@ -18,10 +18,8 @@ typedef void* EGLConfig;
 typedef unsigned int GLuint;
 #endif
 
-class eGLSAnimation: public Object
+class eGLSAnimation
 {
-    DECLARE_REF(eGLSAnimation);
-
 public:
     enum AnimationType {
         TYPE_FADE,
@@ -46,16 +44,17 @@ public:
     void stop();
     void pause();
     void resume();
+    void tick();
 
-    bool isRunning() const { return m_isRunning; }
+    bool isRunning() const { return m_active; }
 
 private:
-    ePtr<eTimer> m_timer;
     eWidget *m_widget;
+    ePtr<eTimer> m_timer;
     AnimationParams m_params;
-    int m_currentStep;
-    int m_totalSteps;
-    bool m_isRunning;
+    int m_current_tick;
+    int m_total_ticks;
+    bool m_active;
 
 #ifdef HAVE_MALI
     // EGL objects for Mali
@@ -71,7 +70,6 @@ private:
     bool createShaders();
 #endif
 
-    void step();
     void applyFade(float progress);
     void applySlide(float progress);
     void applyZoom(float progress);
