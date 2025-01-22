@@ -24,6 +24,7 @@ public:
     };
 
     void setBackgroundColor(const gRGB &col);
+    void setCornerRadius(int radius, int edges);
 
     void setFlag(int flags);
     void clearFlag(int flags);
