@@ -33,17 +33,18 @@ eGLSAnimation::~eGLSAnimation()
     stop();
 }
 
-void eGLSAnimation::start(const AnimationParams &params)
+void eGLSAnimation::start(const eGLSAnimationParams &params)
 {
     if (m_active)
         stop();
 
     m_params = params;
     m_current_tick = 0;
-    m_total_ticks = params.duration / 16; // ~60fps
+    m_total_ticks = params.duration / 16;  // 60fps
     m_active = true;
-
-    m_timer->start(16); // 16ms for ~60fps
+    
+    // Start timer for animation updates
+    m_timer->start(16);  // ~60fps
 }
 
 void eGLSAnimation::stop()
@@ -80,8 +81,11 @@ void eGLSAnimation::tick()
         return;
 
     m_current_tick++;
-    float progress = static_cast<float>(m_current_tick) / m_total_ticks;
-
+    float progress = (float)m_current_tick / m_total_ticks;
+    
+    // Apply easing (simple ease-in-out)
+    progress = progress < 0.5f ? 2.0f * progress * progress : -1.0f + (4.0f - 2.0f * progress) * progress;
+    
     switch (m_params.type)
     {
         case TYPE_FADE:
@@ -94,7 +98,7 @@ void eGLSAnimation::tick()
             applyZoom(progress);
             break;
     }
-
+    
     if (m_current_tick >= m_total_ticks)
     {
         stop();
@@ -107,31 +111,40 @@ void eGLSAnimation::tick()
 
 void eGLSAnimation::applyFade(float progress)
 {
-    int currentValue = m_params.startValue + (m_params.endValue - m_params.startValue) * progress;
-    // Instead of setAlpha, we'll use setBackgroundColor with alpha
-    gRGB color(0, 0, 0, currentValue);
+    int opacity = m_params.startValue + (m_params.endValue - m_params.startValue) * progress;
+    gRGB color(0, 0, 0, opacity);
     m_widget->setBackgroundColor(color);
 }
 
 void eGLSAnimation::applySlide(float progress)
 {
-    int currentX = m_params.startPos.x() + (m_params.endPos.x() - m_params.startPos.x()) * progress;
-    int currentY = m_params.startPos.y() + (m_params.endPos.y() - m_params.startPos.y()) * progress;
-    m_widget->move(ePoint(currentX, currentY));
+    int x = m_params.startPos.x() + (m_params.endPos.x() - m_params.startPos.x()) * progress;
+    int y = m_params.startPos.y() + (m_params.endPos.y() - m_params.startPos.y()) * progress;
+    m_widget->move(ePoint(x, y));
 }
 
 void eGLSAnimation::applyZoom(float progress)
 {
-    float scale = m_params.startValue + (m_params.endValue - m_params.startValue) * progress;
-    scale /= 100.0f; // Convert percentage to scale factor
+    float scale = (m_params.startValue + (m_params.endValue - m_params.startValue) * progress) / 100.0f;
     
-    eSize size = m_widget->size();
-    int newWidth = size.width() * scale;
-    int newHeight = size.height() * scale;
+    ePoint widgetPos = m_widget->position();
+    eSize widgetSize = m_widget->size();
     
-    // Calculate new position to maintain center point
-    int newX = m_params.center.x() - (newWidth / 2);
-    int newY = m_params.center.y() - (newHeight / 2);
+    // Calculate center if not specified
+    ePoint center = m_params.center;
+    if (center.x() == 0 && center.y() == 0)
+    {
+        center = ePoint(
+            widgetPos.x() + widgetSize.width() / 2,
+            widgetPos.y() + widgetSize.height() / 2
+        );
+    }
+    
+    // Calculate new position and size
+    int newWidth = widgetSize.width() * scale;
+    int newHeight = widgetSize.height() * scale;
+    int newX = center.x() - (newWidth / 2);
+    int newY = center.y() - (newHeight / 2);
     
     m_widget->resize(eSize(newWidth, newHeight));
     m_widget->move(ePoint(newX, newY));
