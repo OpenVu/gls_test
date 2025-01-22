@@ -40,12 +40,13 @@ struct eGLSAnimationParams {
         duration(1000) {}
 };
 
-class eGLSAnimation : public Object
+class eGLSAnimation : public iObject
 {
     DECLARE_REF(eGLSAnimation);
 
-    ePtr<eTimer> m_timer;
+private:
     eWidget *m_widget;
+    ePtr<eTimer> m_timer;
     eGLSAnimationParams m_params;
     int m_current_tick;
     int m_total_ticks;
