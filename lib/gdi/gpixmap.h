@@ -231,8 +231,13 @@ public:
 	virtual ~gPixmap();
 	eSize size() const { return eSize(surface->x, surface->y); }
 
+	void setAlpha(int alpha);
+	void move(const ePoint &pos);
+	void resize(const eSize &size);
+
 private:
 	gPixmapDisposeCallback on_dispose;
+	ePoint m_position;
 
 	friend class gDC;
 	void fill(const gRegion &clip, const gColor &color);
