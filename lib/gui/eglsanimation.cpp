@@ -1,32 +1,25 @@
 #include "eglsanimation.h"
-#include <lib/base/ebase.h>
-#include <lib/gui/ewidget.h>
-#include <EGL/egl.h>
-#include <GLES2/gl2.h>
-
-// Add Mali specific headers
-#ifdef HAVE_MALI
-#include <EGL/fbdev_window.h>
-#endif
+#include <lib/base/init.h>
+#include <lib/base/init_num.h>
+#include <lib/gdi/grc.h>
 
 DEFINE_REF(eGLSAnimation);
 
 eGLSAnimation::eGLSAnimation(eWidget *widget)
-    : m_widget(widget)
+    : m_timer(eTimer::create(eApp))
+    , m_widget(widget)
     , m_currentStep(0)
     , m_totalSteps(0)
     , m_isRunning(false)
 #ifdef HAVE_MALI
-    , m_display(EGL_NO_DISPLAY)
-    , m_surface(EGL_NO_SURFACE)
-    , m_context(EGL_NO_CONTEXT)
+    , m_eglDisplay(EGL_NO_DISPLAY)
+    , m_eglContext(EGL_NO_CONTEXT)
+    , m_eglSurface(EGL_NO_SURFACE)
     , m_program(0)
     , m_texture(0)
 #endif
 {
-    m_timer = eTimer::create(eApp);
-    CONNECT(m_timer->timeout, eGLSAnimation::step);
-
+    m_timer->timeout.connect(this, &eGLSAnimation::step);
 #ifdef HAVE_MALI
     initEGL();
 #endif
@@ -37,6 +30,7 @@ eGLSAnimation::~eGLSAnimation()
 #ifdef HAVE_MALI
     cleanupEGL();
 #endif
+    stop();
 }
 
 void eGLSAnimation::start(const AnimationParams &params)
@@ -46,11 +40,10 @@ void eGLSAnimation::start(const AnimationParams &params)
 
     m_params = params;
     m_currentStep = 0;
-    m_totalSteps = m_params.duration / 16; // ~60fps
+    m_totalSteps = params.duration / 16; // ~60fps
     m_isRunning = true;
 
-    // Start the animation timer
-    m_timer->start(16); // 16ms for ~60fps
+    m_timer->start(16, true); // 16ms for ~60fps
 }
 
 void eGLSAnimation::stop()
@@ -66,13 +59,19 @@ void eGLSAnimation::stop()
 void eGLSAnimation::pause()
 {
     if (m_isRunning)
+    {
         m_timer->stop();
+        m_isRunning = false;
+    }
 }
 
 void eGLSAnimation::resume()
 {
-    if (m_isRunning)
-        m_timer->start(16);
+    if (!m_isRunning && m_currentStep < m_totalSteps)
+    {
+        m_timer->start(16, true);
+        m_isRunning = true;
+    }
 }
 
 void eGLSAnimation::step()
@@ -83,7 +82,6 @@ void eGLSAnimation::step()
     m_currentStep++;
     float progress = static_cast<float>(m_currentStep) / m_totalSteps;
 
-    // Apply the animation based on type
     switch (m_params.type)
     {
         case TYPE_FADE:
@@ -97,30 +95,26 @@ void eGLSAnimation::step()
             break;
     }
 
-    // Invalidate the widget to trigger a redraw
-    m_widget->invalidate();
-
-    // Check if animation is complete
     if (m_currentStep >= m_totalSteps)
     {
         stop();
-        animationFinished();
+        return;
     }
+
+    m_timer->start(16, true);
 }
 
 void eGLSAnimation::applyFade(float progress)
 {
-    int currentAlpha = m_params.startValue + (m_params.endValue - m_params.startValue) * progress;
-    m_widget->setAlpha(currentAlpha);
+    int currentValue = m_params.startValue + (m_params.endValue - m_params.startValue) * progress;
+    m_widget->setAlpha(currentValue);
 }
 
 void eGLSAnimation::applySlide(float progress)
 {
-    ePoint currentPos(
-        m_params.startPos.x() + (m_params.endPos.x() - m_params.startPos.x()) * progress,
-        m_params.startPos.y() + (m_params.endPos.y() - m_params.startPos.y()) * progress
-    );
-    m_widget->move(currentPos);
+    int currentX = m_params.startPos.x() + (m_params.endPos.x() - m_params.startPos.x()) * progress;
+    int currentY = m_params.startPos.y() + (m_params.endPos.y() - m_params.startPos.y()) * progress;
+    m_widget->move(ePoint(currentX, currentY));
 }
 
 void eGLSAnimation::applyZoom(float progress)
@@ -128,12 +122,9 @@ void eGLSAnimation::applyZoom(float progress)
     float scale = m_params.startValue + (m_params.endValue - m_params.startValue) * progress;
     scale /= 100.0f; // Convert percentage to scale factor
     
-    // Apply zoom transformation relative to center point
-    ePoint widgetPos = m_widget->position();
-    eSize widgetSize = m_widget->size();
-    
-    int newWidth = widgetSize.width() * scale;
-    int newHeight = widgetSize.height() * scale;
+    eSize size = m_widget->size();
+    int newWidth = size.width() * scale;
+    int newHeight = size.height() * scale;
     
     // Calculate new position to maintain center point
     int newX = m_params.center.x() - (newWidth / 2);
@@ -146,12 +137,12 @@ void eGLSAnimation::applyZoom(float progress)
 #ifdef HAVE_MALI
 bool eGLSAnimation::initEGL()
 {
-    m_display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-    if (m_display == EGL_NO_DISPLAY)
+    m_eglDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    if (m_eglDisplay == EGL_NO_DISPLAY)
         return false;
 
     EGLint major, minor;
-    if (!eglInitialize(m_display, &major, &minor))
+    if (!eglInitialize(m_eglDisplay, &major, &minor))
         return false;
 
     const EGLint configAttribs[] = {
@@ -164,9 +155,8 @@ bool eGLSAnimation::initEGL()
         EGL_NONE
     };
 
-    EGLConfig config;
     EGLint numConfigs;
-    if (!eglChooseConfig(m_display, configAttribs, &config, 1, &numConfigs))
+    if (!eglChooseConfig(m_eglDisplay, configAttribs, &m_eglConfig, 1, &numConfigs))
         return false;
 
     const EGLint contextAttribs[] = {
@@ -174,8 +164,8 @@ bool eGLSAnimation::initEGL()
         EGL_NONE
     };
 
-    m_context = eglCreateContext(m_display, config, EGL_NO_CONTEXT, contextAttribs);
-    if (m_context == EGL_NO_CONTEXT)
+    m_eglContext = eglCreateContext(m_eglDisplay, m_eglConfig, EGL_NO_CONTEXT, contextAttribs);
+    if (m_eglContext == EGL_NO_CONTEXT)
         return false;
 
     return createShaders();
@@ -183,20 +173,20 @@ bool eGLSAnimation::initEGL()
 
 void eGLSAnimation::cleanupEGL()
 {
-    if (m_display != EGL_NO_DISPLAY)
+    if (m_eglDisplay != EGL_NO_DISPLAY)
     {
-        if (m_context != EGL_NO_CONTEXT)
+        if (m_eglContext != EGL_NO_CONTEXT)
         {
-            eglDestroyContext(m_display, m_context);
-            m_context = EGL_NO_CONTEXT;
+            eglDestroyContext(m_eglDisplay, m_eglContext);
+            m_eglContext = EGL_NO_CONTEXT;
         }
-        if (m_surface != EGL_NO_SURFACE)
+        if (m_eglSurface != EGL_NO_SURFACE)
         {
-            eglDestroySurface(m_display, m_surface);
-            m_surface = EGL_NO_SURFACE;
+            eglDestroySurface(m_eglDisplay, m_eglSurface);
+            m_eglSurface = EGL_NO_SURFACE;
         }
-        eglTerminate(m_display);
-        m_display = EGL_NO_DISPLAY;
+        eglTerminate(m_eglDisplay);
+        m_eglDisplay = EGL_NO_DISPLAY;
     }
 
     if (m_program)
