@@ -2,8 +2,8 @@
 #define __lib_gui_eglsanimation_h
 
 #include <lib/base/object.h>
-#include <lib/gdi/gpixmap.h>
 #include <lib/base/ebase.h>
+#include <lib/gdi/gpixmap.h>
 #include <lib/gui/ewidget.h>
 
 #ifdef HAVE_MALI
@@ -18,8 +18,10 @@ typedef void* EGLConfig;
 typedef unsigned int GLuint;
 #endif
 
-class eGLSAnimation
+class eGLSAnimation : public Object
 {
+    DECLARE_REF(eGLSAnimation);
+
 public:
     enum AnimationType {
         TYPE_FADE,
