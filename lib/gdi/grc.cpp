@@ -1068,6 +1068,26 @@ void gDC::exec(const gOpcode *o)
 	case gOpcode::incrementSpinner:
 		incrementSpinner();
 		break;
+	case gOpcode::glsSetAlpha:
+		if (m_pixmap)
+			m_pixmap->setAlpha(o->parm.alpha);
+		break;
+	case gOpcode::glsSetPosition:
+		if (m_pixmap)
+		{
+			m_pixmap_position = o->parm.position;
+			m_pixmap->move(m_pixmap_position);
+		}
+		break;
+	case gOpcode::glsSetScale:
+		if (m_pixmap)
+		{
+			eSize size = m_pixmap->size();
+			float scale = o->parm.scale / 100.0f;
+			size = eSize(size.width() * scale, size.height() * scale);
+			m_pixmap->resize(size);
+		}
+		break;	
 	default:
 		eFatal("[gRC] gDC Error: Illegal opcode %d, expect memory leak!", o->opcode);
 	}
