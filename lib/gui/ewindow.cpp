@@ -71,7 +71,7 @@ void eWindow::clearFlag(int flags)
 	m_flags &= ~flags;
 }
 
-void eWindow::setAnimation(eGLSAnimation::AnimationType type, int duration)
+void eWindow::setAnimation(eGLSAnimationType type, int duration)
 {
     if (!m_animation)
         m_animation = new eGLSAnimation(this);
@@ -82,12 +82,12 @@ void eWindow::setAnimation(eGLSAnimation::AnimationType type, int duration)
     
     switch (type)
     {
-        case eGLSAnimation::TYPE_FADE:
+        case TYPE_FADE:
             params.startValue = 0;
             params.endValue = 100;
             break;
             
-        case eGLSAnimation::TYPE_SLIDE:
+        case TYPE_SLIDE:
             {
                 ePoint current = position();
                 params.startPos = ePoint(current.x() - 100, current.y());
@@ -95,7 +95,7 @@ void eWindow::setAnimation(eGLSAnimation::AnimationType type, int duration)
             }
             break;
             
-        case eGLSAnimation::TYPE_ZOOM:
+        case TYPE_ZOOM:
             params.startValue = 50;
             params.endValue = 100;
             break;
