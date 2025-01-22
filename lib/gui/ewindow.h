@@ -2,7 +2,6 @@
 #define __lib_gui_ewindow_h
 
 #include <lib/gui/ewidget.h>
-#include <lib/gui/ewindowstyle.h>
 #include <lib/gui/eglsanimation.h>
 
 class eWidgetDesktop;
@@ -24,13 +23,12 @@ public:
     };
 
     void setBackgroundColor(const gRGB &col);
-    void setCornerRadius(int radius, int edges);
 
     void setFlag(int flags);
     void clearFlag(int flags);
     
     // GLS Animation support
-    void setAnimation(eGLSAnimation::AnimationType type, int duration = 500);
+    void setAnimation(eGLSAnimationType type, int duration = 500);
     void clearAnimation();
 
 protected:
