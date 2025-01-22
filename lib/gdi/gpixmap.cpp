@@ -2206,34 +2206,33 @@ void gPixmap::move(const ePoint &pos)
 
 void gPixmap::resize(const eSize &size)
 {
-    if (!surface || size == eSize(surface->x, surface->y))
+    if (!surface)
         return;
-        
-    // Create new surface with desired size
-    gSurface *new_surface = new gSurface(size.width(), size.height(), surface->bpp);
+
+    if (size == eSize(surface->x, surface->y))
+        return;
+
+    // Create new surface with acceleration same as current surface
+    gSurface *new_surface = new gSurface(size.width(), size.height(), surface->bpp, gPixmap::accelAuto);
     
-    // Copy and scale content
-    int old_stride = surface->stride;
-    int new_stride = new_surface->stride;
-    uint8_t *src = (uint8_t*)surface->data;
-    uint8_t *dst = (uint8_t*)new_surface->data;
-    
-    for (int y = 0; y < new_surface->y; ++y)
+    // Copy data from old surface to new surface
+    if (surface->data && new_surface->data)
     {
-        int src_y = (y * surface->y) / new_surface->y;
-        uint8_t *src_line = src + src_y * old_stride;
-        uint8_t *dst_line = dst + y * new_stride;
+        int src_stride = surface->stride;
+        int dst_stride = new_surface->stride;
+        int bytes_to_copy = std::min(src_stride, dst_stride);
+        int height = std::min(surface->y, new_surface->y);
         
-        for (int x = 0; x < new_surface->x; ++x)
+        for (int i = 0; i < height; i++)
         {
-            int src_x = (x * surface->x) / new_surface->x;
-            memcpy(dst_line + x * (surface->bpp/8), 
-                  src_line + src_x * (surface->bpp/8), 
-                  surface->bpp/8);
+            memcpy(
+                (uint8_t*)new_surface->data + i * dst_stride,
+                (uint8_t*)surface->data + i * src_stride,
+                bytes_to_copy);
         }
     }
-    
-    // Replace old surface
+
+    // Delete old surface and assign new one
     delete surface;
     surface = new_surface;
 }
