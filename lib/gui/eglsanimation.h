@@ -49,7 +49,7 @@ public:
     void tick();
 
     bool isRunning() const { return m_active; }
-    Signal0<void> animationFinished;
+    PSignal0<void> animationFinished;
 
 private:
     eWidget *m_widget;
