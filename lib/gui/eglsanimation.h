@@ -5,11 +5,15 @@
 #include <lib/gdi/gpixmap.h>
 #include <lib/base/ebase.h>
 #include <lib/gui/ewidget.h>
+#ifdef HAVE_MALI
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
-
-#ifdef HAVE_MALI
-#include <EGL/fbdev_window.h>
+#else
+// Dummy types when no EGL/GLES2 is available
+typedef void* EGLDisplay;
+typedef void* EGLSurface;
+typedef void* EGLContext;
+typedef unsigned int GLuint;
 #endif
 
 class eGLSAnimation: public Object
