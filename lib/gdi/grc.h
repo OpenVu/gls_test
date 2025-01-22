@@ -30,208 +30,212 @@ class eTextPara;
 class gDC;
 struct gOpcode
 {
-	enum Opcode
-	{
-		renderText,
-		renderPara,
-		setFont,
+    gOpcode() : opcode(renderText), dc(nullptr), flags(0) {}
+    
+    enum Opcode
+    {
+        renderText,
+        renderPara,
+        setFont,
 
-		fill,
-		fillRegion,
-		clear,
-		blit,
-		gradient,
-		rectangle,
+        fill,
+        fillRegion,
+        clear,
+        blit,
+        gradient,
+        rectangle,
 
-		setPalette,
-		mergePalette,
+        setPalette,
+        mergePalette,
 
-		line,
+        line,
 
-		setBackgroundColor,
-		setForegroundColor,
+        setBackgroundColor,
+        setForegroundColor,
 
-		setBackgroundColorRGB,
-		setForegroundColorRGB,
+        setBackgroundColorRGB,
+        setForegroundColorRGB,
 
-		setGradient,
-		setRadius,
-		setBorder,
+        setGradient,
+        setRadius,
+        setBorder,
 
-		setOffset,
+        setOffset,
 
-		setClip,
-		addClip,
-		popClip,
+        setClip,
+        addClip,
+        popClip,
 
-		flush,
+        flush,
 
-		waitVSync,
-		flip,
-		notify,
+        waitVSync,
+        flip,
+        notify,
 
-		enableSpinner,
-		disableSpinner,
-		incrementSpinner,
+        enableSpinner,
+        disableSpinner,
+        incrementSpinner,
 
-		shutdown,
+        shutdown,
 
-		setCompositing,
-		sendShow,
-		sendHide,
-		glsSetAlpha,
-		glsSetPosition,
-		glsSetScale,
+        setCompositing,
+        glsSetAlpha,
+        glsSetPosition,
+        glsSetScale,
+        sendShow,
+        sendHide,
 #ifdef USE_LIBVUGLES2
-		sendShowItem,
-		setFlush,
-		setView,
+        sendShowItem,
+        setFlush,
+        setView,
 #endif
-	} opcode;
+    } opcode;
 
-	gDC *dc;
-	union para
-	{
-		struct pfillRect
-		{
-			eRect area;
-		} *fill;
+    gDC *dc;
+    int flags;
+    union para
+    {
+        para() {}
+        ~para() {}
+        struct pfillRect
+        {
+            eRect area;
+        } *fill;
 
-		struct pfillRegion
-		{
-			gRegion region;
-		} *fillRegion;
+        struct pfillRegion
+        {
+            gRegion region;
+        } *fillRegion;
 
-		struct prenderText
-		{
-			eRect area;
-			char *text;
-			int flags;
-			int border;
-			gRGB bordercolor;
-			int markedpos;
-			int scrollpos;
-			int *offset;
-		} *renderText;
+        struct prenderText
+        {
+            eRect area;
+            char *text;
+            int flags;
+            int border;
+            gRGB bordercolor;
+            int markedpos;
+            int scrollpos;
+            int *offset;
+        } *renderText;
 
-		struct prenderPara
-		{
-			ePoint offset;
-			eTextPara *textpara;
-		} *renderPara;
+        struct prenderPara
+        {
+            ePoint offset;
+            eTextPara *textpara;
+        } *renderPara;
 
-		struct psetFont
-		{
-			gFont *font;
-		} *setFont;
+        struct psetFont
+        {
+            gFont *font;
+        } *setFont;
 
-		struct psetPalette
-		{
-			gPalette *palette;
-		} *setPalette;
+        struct psetPalette
+        {
+            gPalette *palette;
+        } *setPalette;
 
-		struct pblit
-		{
-			gPixmap *pixmap;
-			int flags;
-			eRect position;
-			eRect clip;
-		} *blit;
+        struct pblit
+        {
+            gPixmap *pixmap;
+            int flags;
+            eRect position;
+            eRect clip;
+        } *blit;
 
-		struct pgradient
-		{
-			std::vector<gRGB> colors;
-			uint8_t orientation;
-			bool alphablend;
-			int fullSize;
-		} *gradient;
+        struct pgradient
+        {
+            std::vector<gRGB> colors;
+            uint8_t orientation;
+            bool alphablend;
+            int fullSize;
+        } *gradient;
 
-		struct pradius
-		{
-			int radius;
-			uint8_t edges;
-		} *radius;
+        struct pradius
+        {
+            int radius;
+            uint8_t edges;
+        } *radius;
 
-		struct pborder
-		{
-			gRGB color;
-			int width;
-		} *border;
+        struct pborder
+        {
+            gRGB color;
+            int width;
+        } *border;
 
-		struct prectangle
-		{
-			eRect area;
-		} *rectangle;
+        struct prectangle
+        {
+            eRect area;
+        } *rectangle;
 
-		struct pmergePalette
-		{
-			gPixmap *target;
-		} *mergePalette;
+        struct pmergePalette
+        {
+            gPixmap *target;
+        } *mergePalette;
 
-		struct pline
-		{
-			ePoint start, end;
-		} *line;
+        struct pline
+        {
+            ePoint start, end;
+        } *line;
 
-		struct psetClip
-		{
-			gRegion region;
-		} *clip;
+        struct psetClip
+        {
+            gRegion region;
+        } *clip;
 
-		struct psetColor
-		{
-			gColor color;
-		} *setColor;
+        struct psetColor
+        {
+            gColor color;
+        } *setColor;
 
-		struct psetColorRGB
-		{
-			gRGB color;
-		} *setColorRGB;
+        struct psetColorRGB
+        {
+            gRGB color;
+        } *setColorRGB;
 
-		struct psetOffset
-		{
-			ePoint value;
-			int rel;
-		} *setOffset;
+        struct psetOffset
+        {
+            ePoint value;
+            int rel;
+        } *setOffset;
 
-		struct {
-	            int alpha_value;
-	        } set_alpha;
-	        
-	        struct {
-	            ePoint pos;
-	        } set_position;
-	        
-	        struct {
-	            float scale_factor;
-	        } set_scale;
+        gCompositingData *setCompositing;
 
-		gCompositingData *setCompositing;
-
-		struct psetShowHideInfo
-		{
-			ePoint point;
-			eSize size;
-		} *setShowHideInfo;
+        struct psetShowHideInfo
+        {
+            ePoint point;
+            eSize size;
+        } *setShowHideInfo;
 #ifdef USE_LIBVUGLES2
-		struct psetShowItemInfo
-		{
-			long dir;
-			ePoint point;
-			eSize size;
-		} *setShowItemInfo;
+        struct psetShowItemInfo
+        {
+            long dir;
+            ePoint point;
+            eSize size;
+        } *setShowItemInfo;
 
-		struct psetFlush
-		{
-			bool enable;
-		} *setFlush;
+        struct psetFlush
+        {
+            bool enable;
+        } *setFlush;
 
-		struct psetViewInfo
-		{
-			eSize size;
-		} *setViewInfo;
+        struct psetViewInfo
+        {
+            eSize size;
+        } *setViewInfo;
 #endif
-	} parm;
+        struct {
+            int alpha_value;
+        } set_alpha;
+        
+        struct {
+            ePoint pos;
+        } set_position;
+        
+        struct {
+            float scale_factor;
+        } set_scale;
+    } parm;
 };
 
 #define MAXSIZE 2048
@@ -239,208 +243,208 @@ struct gOpcode
 /* gRC is the singleton which controls the fifo and dispatches commands */
 class gRC : public iObject, public sigc::trackable
 {
-	DECLARE_REF(gRC);
-	friend class gPainter;
-	static gRC *instance;
+    DECLARE_REF(gRC);
+    friend class gPainter;
+    static gRC *instance;
 
 #ifndef SYNC_PAINT
-	static void *thread_wrapper(void *ptr);
-	pthread_t the_thread;
-	pthread_mutex_t mutex;
-	pthread_cond_t cond;
+    static void *thread_wrapper(void *ptr);
+    pthread_t the_thread;
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
 #endif
-	void *thread();
+    void *thread();
 
-	gOpcode queue[MAXSIZE];
-	int rp, wp;
+    gOpcode queue[MAXSIZE];
+    int rp, wp;
 
-	eFixedMessagePump<int> m_notify_pump;
-	void recv_notify(const int &i);
+    eFixedMessagePump<int> m_notify_pump;
+    void recv_notify(const int &i);
 
-	ePtr<gDC> m_spinner_dc;
-	int m_spinner_enabled;
+    ePtr<gDC> m_spinner_dc;
+    int m_spinner_enabled;
 
-	int m_spinneronoff;
+    int m_spinneronoff;
 
-	void enableSpinner();
-	void disableSpinner();
+    void enableSpinner();
+    void disableSpinner();
 
-	ePtr<gCompositingData> m_compositing;
+    ePtr<gCompositingData> m_compositing;
 
-	int m_prev_idle_count;
+    int m_prev_idle_count;
 
 public:
-	gRC();
-	virtual ~gRC();
+    gRC();
+    virtual ~gRC();
 
-	void submit(const gOpcode &o);
+    void submit(const gOpcode &o);
 
-	sigc::signal<void()> notify;
+    sigc::signal<void()> notify;
 
-	void setSpinnerDC(gDC *dc) { m_spinner_dc = dc; }
-	void setSpinnerOnOff(int onoff) { m_spinneronoff = onoff; }
+    void setSpinnerDC(gDC *dc) { m_spinner_dc = dc; }
+    void setSpinnerOnOff(int onoff) { m_spinneronoff = onoff; }
 
-	static gRC *getInstance();
+    static gRC *getInstance();
 };
 
 /* gPainter is the user frontend, which in turn sends commands through gRC */
 class gPainter
 {
-	ePtr<gDC> m_dc;
-	ePtr<gRC> m_rc;
-	friend class gRC;
+    ePtr<gDC> m_dc;
+    ePtr<gRC> m_rc;
+    friend class gRC;
 
-	gOpcode *beginptr;
-	void begin(const eRect &rect);
-	void end();
+    gOpcode *beginptr;
+    void begin(const eRect &rect);
+    void end();
 
 public:
-	gPainter(gDC *dc, eRect rect = eRect());
-	virtual ~gPainter();
+    gPainter(gDC *dc, eRect rect = eRect());
+    virtual ~gPainter();
 
-	void setBackgroundColor(const gColor &color);
-	void setForegroundColor(const gColor &color);
+    void setBackgroundColor(const gColor &color);
+    void setForegroundColor(const gColor &color);
 
-	void setBackgroundColor(const gRGB &color);
-	void setForegroundColor(const gRGB &color);
+    void setBackgroundColor(const gRGB &color);
+    void setForegroundColor(const gRGB &color);
 
-	void setBorder(const gRGB &borderColor, int width);
-	void setGradient(const std::vector<gRGB> &colors, uint8_t orientation, bool alphablend, int fullSize = 0);
-	void setRadius(int radius, uint8_t edges);
+    void setBorder(const gRGB &borderColor, int width);
+    void setGradient(const std::vector<gRGB> &colors, uint8_t orientation, bool alphablend, int fullSize = 0);
+    void setRadius(int radius, uint8_t edges);
 
-	void setFont(gFont *font);
-	/* flags only THESE: */
-	enum
-	{
-		// todo, make mask. you cannot align both right AND center AND block ;)
-		RT_HALIGN_BIDI = 0, /* default */
-		RT_HALIGN_LEFT = 1,
-		RT_HALIGN_RIGHT = 2,
-		RT_HALIGN_CENTER = 4,
-		RT_HALIGN_BLOCK = 8,
+    void setFont(gFont *font);
+    /* flags only THESE: */
+    enum
+    {
+        // todo, make mask. you cannot align both right AND center AND block ;)
+        RT_HALIGN_BIDI = 0, /* default */
+        RT_HALIGN_LEFT = 1,
+        RT_HALIGN_RIGHT = 2,
+        RT_HALIGN_CENTER = 4,
+        RT_HALIGN_BLOCK = 8,
 
-		RT_VALIGN_TOP = 0, /* default */
-		RT_VALIGN_CENTER = 16,
-		RT_VALIGN_BOTTOM = 32,
+        RT_VALIGN_TOP = 0, /* default */
+        RT_VALIGN_CENTER = 16,
+        RT_VALIGN_BOTTOM = 32,
 
-		RT_WRAP = 64,
-		RT_ELLIPSIS = 128,
-		RT_BLEND = 256
-	};
-	void renderText(const eRect &position, const std::string &string, int flags = 0, gRGB bordercolor = gRGB(), int border = 0, int markedpos = -1, int *offset = 0);
+        RT_WRAP = 64,
+        RT_ELLIPSIS = 128,
+        RT_BLEND = 256
+    };
+    void renderText(const eRect &position, const std::string &string, int flags = 0, gRGB bordercolor = gRGB(), int border = 0, int markedpos = -1, int *offset = 0);
 
-	void renderPara(eTextPara *para, ePoint offset = ePoint(0, 0));
+    void renderPara(eTextPara *para, ePoint offset = ePoint(0, 0));
 
-	void fill(const eRect &area);
-	void fill(const gRegion &area);
+    void fill(const eRect &area);
+    void fill(const gRegion &area);
 
-	void clear();
+    void clear();
 
-	enum
-	{
-		BT_ALPHATEST = 1,
-		BT_ALPHABLEND = 2,
-		BT_SCALE = 4, /* will be automatically set by blitScale */
-		BT_KEEP_ASPECT_RATIO = 8,
-		BT_FIXRATIO = 8,
-		BT_HALIGN_CENTER = 16,
-		BT_HALIGN_RIGHT = 32,
-		BT_VALIGN_CENTER = 64,
-		BT_VALIGN_BOTTOM = 128
-	};
+    enum
+    {
+        BT_ALPHATEST = 1,
+        BT_ALPHABLEND = 2,
+        BT_SCALE = 4, /* will be automatically set by blitScale */
+        BT_KEEP_ASPECT_RATIO = 8,
+        BT_FIXRATIO = 8,
+        BT_HALIGN_CENTER = 16,
+        BT_HALIGN_RIGHT = 32,
+        BT_VALIGN_CENTER = 64,
+        BT_VALIGN_BOTTOM = 128
+    };
 
-	enum
-	{
-		GRADIENT_OFF = 0,
-		GRADIENT_VERTICAL = 1,
-		GRADIENT_HORIZONTAL = 2
-	};
+    enum
+    {
+        GRADIENT_OFF = 0,
+        GRADIENT_VERTICAL = 1,
+        GRADIENT_HORIZONTAL = 2
+    };
 
-	void blitScale(gPixmap *pixmap, const eRect &pos, const eRect &clip=eRect(), int flags=0, int aflags = BT_SCALE);
-	void blit(gPixmap *pixmap, ePoint pos, const eRect &clip=eRect(), int flags=0);
-	void blit(gPixmap *pixmap, const eRect &pos, const eRect &clip=eRect(), int flags=0);
+    void blitScale(gPixmap *pixmap, const eRect &pos, const eRect &clip=eRect(), int flags=0, int aflags = BT_SCALE);
+    void blit(gPixmap *pixmap, ePoint pos, const eRect &clip=eRect(), int flags=0);
+    void blit(gPixmap *pixmap, const eRect &pos, const eRect &clip=eRect(), int flags=0);
 
-	void drawRectangle(const eRect &area);
+    void drawRectangle(const eRect &area);
 
-	void setPalette(gRGB *colors, int start = 0, int len = 256);
-	void setPalette(gPixmap *source);
-	void mergePalette(gPixmap *target);
+    void setPalette(gRGB *colors, int start = 0, int len = 256);
+    void setPalette(gPixmap *source);
+    void mergePalette(gPixmap *target);
 
-	void line(ePoint start, ePoint end);
+    void line(ePoint start, ePoint end);
 
-	void setOffset(ePoint abs);
-	void moveOffset(ePoint rel);
-	void resetOffset();
+    void setOffset(ePoint abs);
+    void moveOffset(ePoint rel);
+    void resetOffset();
 
-	void resetClip(const gRegion &clip);
-	void clip(const gRegion &clip);
-	void clippop();
+    void resetClip(const gRegion &clip);
+    void clip(const gRegion &clip);
+    void clippop();
 
-	void waitVSync();
-	void flip();
-	void notify();
-	void setCompositing(gCompositingData *comp);
+    void waitVSync();
+    void flip();
+    void notify();
+    void setCompositing(gCompositingData *comp);
 
-	void flush();
-	void sendShow(ePoint point, eSize size);
-	void sendHide(ePoint point, eSize size);
+    void flush();
+    void sendShow(ePoint point, eSize size);
+    void sendHide(ePoint point, eSize size);
 #ifdef USE_LIBVUGLES2
-	void sendShowItem(long dir, ePoint point, eSize size);
-	void setFlush(bool val);
-	void setView(eSize size);
+    void sendShowItem(long dir, ePoint point, eSize size);
+    void setFlush(bool val);
+    void setView(eSize size);
 #endif
 };
 
 class gDC : public iObject
 {
-	DECLARE_REF(gDC);
+    DECLARE_REF(gDC);
 
 protected:
-	ePtr<gPixmap> m_pixmap;
+    ePtr<gPixmap> m_pixmap;
 
-	gColor m_foreground_color, m_background_color;
-	gRGB m_foreground_color_rgb, m_background_color_rgb;
-	ePtr<gFont> m_current_font;
-	ePoint m_current_offset;
+    gColor m_foreground_color, m_background_color;
+    gRGB m_foreground_color_rgb, m_background_color_rgb;
+    ePtr<gFont> m_current_font;
+    ePoint m_current_offset;
 
-	std::vector<gRGB> m_gradient_colors;
-	uint8_t m_gradient_orientation;
-	bool m_gradient_alphablend;
-	int m_gradient_fullSize;
+    std::vector<gRGB> m_gradient_colors;
+    uint8_t m_gradient_orientation;
+    bool m_gradient_alphablend;
+    int m_gradient_fullSize;
 
-	int m_radius;
-	uint8_t m_radius_edges;
+    int m_radius;
+    uint8_t m_radius_edges;
 
-	gRGB m_border_color;
-	int m_border_width;
+    gRGB m_border_color;
+    int m_border_width;
 
-	std::stack<gRegion> m_clip_stack;
-	gRegion m_current_clip;
+    std::stack<gRegion> m_clip_stack;
+    gRegion m_current_clip;
 
-	ePtr<gPixmap> m_spinner_saved, m_spinner_temp;
-	ePtr<gPixmap> *m_spinner_pic;
-	eRect m_spinner_pos;
-	int m_spinner_num, m_spinner_i;
+    ePtr<gPixmap> m_spinner_saved, m_spinner_temp;
+    ePtr<gPixmap> *m_spinner_pic;
+    eRect m_spinner_pos;
+    int m_spinner_num, m_spinner_i;
 
 public:
-	virtual void exec(const gOpcode *opcode);
-	gDC(gPixmap *pixmap);
-	gDC();
-	virtual ~gDC();
-	gRegion &getClip() { return m_current_clip; }
-	int getPixmap(ePtr<gPixmap> &pm)
-	{
-		pm = m_pixmap;
-		return 0;
-	}
-	gRGB getRGB(gColor col);
-	virtual eSize size() { return m_pixmap->size(); }
-	virtual int islocked() const { return 0; }
+    virtual void exec(const gOpcode *opcode);
+    gDC(gPixmap *pixmap);
+    gDC();
+    virtual ~gDC();
+    gRegion &getClip() { return m_current_clip; }
+    int getPixmap(ePtr<gPixmap> &pm)
+    {
+        pm = m_pixmap;
+        return 0;
+    }
+    gRGB getRGB(gColor col);
+    virtual eSize size() { return m_pixmap->size(); }
+    virtual int islocked() const { return 0; }
 
-	virtual void enableSpinner();
-	virtual void disableSpinner();
-	virtual void incrementSpinner();
-	virtual void setSpinner(eRect pos, ePtr<gPixmap> *pic, int len);
+    virtual void enableSpinner();
+    virtual void disableSpinner();
+    virtual void incrementSpinner();
+    virtual void setSpinner(eRect pos, ePtr<gPixmap> *pic, int len);
 };
 
 #endif
