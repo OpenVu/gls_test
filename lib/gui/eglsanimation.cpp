@@ -98,7 +98,7 @@ void eGLSAnimation::tick()
     if (m_current_tick >= m_total_ticks)
     {
         stop();
-        emit animationFinished();
+        animationFinished();
         return;
     }
 
