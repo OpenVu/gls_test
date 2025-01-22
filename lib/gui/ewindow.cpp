@@ -76,7 +76,8 @@ void eWindow::setAnimation(eGLSAnimationType type, int duration)
     if (!m_animation)
         m_animation = new eGLSAnimation(this);
 
-    eGLSAnimation::AnimationParams params;
+    //eGLSAnimation::AnimationParams params;
+    eGLSAnimationParams params;	
     params.type = type;
     params.duration = duration;
     
