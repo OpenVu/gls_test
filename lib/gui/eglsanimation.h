@@ -1,10 +1,10 @@
 #ifndef __lib_gui_eglsanimation_h
 #define __lib_gui_eglsanimation_h
 
-#include <lib/base/ebase.h>
 #include <lib/base/object.h>
-#include <lib/gdi/gpixmap.h>
+#include <lib/base/ebase.h>
 #include <lib/gui/ewidget.h>
+#include <lib/gdi/gpixmap.h>
 
 #ifdef HAVE_MALI
 #include <EGL/egl.h>
@@ -19,9 +19,9 @@ typedef unsigned int GLuint;
 #endif
 
 enum eGLSAnimationType {
-    TYPE_FADE,
-    TYPE_SLIDE,
-    TYPE_ZOOM
+    TYPE_FADE = 0,
+    TYPE_SLIDE = 1,
+    TYPE_ZOOM = 2
 };
 
 struct eGLSAnimationParams {
@@ -32,17 +32,45 @@ struct eGLSAnimationParams {
     ePoint startPos;
     ePoint endPos;
     ePoint center;
-    
+
     eGLSAnimationParams() : 
         type(TYPE_FADE),
         startValue(0),
         endValue(100),
-        duration(500) {}
+        duration(1000) {}
 };
 
-class eGLSAnimation : public iObject
+class eGLSAnimation : public Object
 {
     DECLARE_REF(eGLSAnimation);
+
+    ePtr<eTimer> m_timer;
+    eWidget *m_widget;
+    eGLSAnimationParams m_params;
+    int m_current_tick;
+    int m_total_ticks;
+    bool m_active;
+
+#ifdef HAVE_MALI
+    EGLDisplay m_eglDisplay;
+    EGLContext m_eglContext;
+    EGLSurface m_eglSurface;
+    GLuint m_program;
+    GLuint m_texture;
+#endif
+
+    void applyFade(float progress);
+    void applySlide(float progress);
+    void applyZoom(float progress);
+
+#ifdef HAVE_MALI
+    bool initEGL();
+    void cleanupEGL();
+    bool createShaders();
+#endif
+
+protected:
+    void timerTick();
 
 public:
     eGLSAnimation(eWidget *widget);
@@ -54,35 +82,9 @@ public:
     void resume();
     void tick();
 
-    bool isRunning() const { return m_active; }
-
     PSignal0<void> animationFinished;
 
-private:
-    eWidget *m_widget;
-    ePtr<eTimer> m_timer;
-    eGLSAnimationParams m_params;
-    int m_current_tick;
-    int m_total_ticks;
-    bool m_active;
-
-#ifdef HAVE_MALI
-    // EGL objects for Mali
-    EGLDisplay m_eglDisplay;
-    EGLConfig m_eglConfig;
-    EGLContext m_eglContext;
-    EGLSurface m_eglSurface;
-    GLuint m_program;
-    GLuint m_texture;
-
-    bool initEGL();
-    void cleanupEGL();
-    bool createShaders();
-#endif
-
-    void applyFade(float progress);
-    void applySlide(float progress);
-    void applyZoom(float progress);
+    bool isRunning() const { return m_active; }
 };
 
 #endif // __lib_gui_eglsanimation_h
