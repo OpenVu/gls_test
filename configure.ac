@@ -40,31 +40,67 @@ PKG_CHECK_MODULES(AVAHI, avahi-client)
 AC_ARG_ENABLE([mali],
     AS_HELP_STRING([--enable-mali], [Enable MALI/HiSilicon GPU support]))
 
+AC_MSG_NOTICE([Checking for MALI/HiSilicon GPU support...])
+AC_MSG_NOTICE([enable_mali=$enable_mali])
+
 AS_IF([test "x$enable_mali" = "xyes"], [
     # Check for HiSilicon GPU headers and libraries
+    AC_MSG_CHECKING([for EGL/GLES2 headers])
     AC_CHECK_HEADERS([EGL/egl.h GLES2/gl2.h], [
-        AC_CHECK_LIB([EGL], [eglGetDisplay], [
-            AC_CHECK_LIB([GLESv2], [glCreateShader], [
+        AC_MSG_RESULT([yes])
+        AC_MSG_NOTICE([Found EGL/GLES2 headers])
+        
+        # Check for libMali.so which contains all GPU functionality
+        AC_MSG_CHECKING([for libMali.so])
+        if test -f "/usr/lib/libMali.so"; then
+            AC_MSG_RESULT([yes])
+            AC_MSG_NOTICE([Found libMali.so])
+            
+            # Test if we can link against Mali
+            AC_MSG_CHECKING([if libMali.so is working])
+            save_LIBS="$LIBS"
+            LIBS="-lMali $LIBS"
+            AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+                #include <EGL/egl.h>
+                #include <GLES2/gl2.h>
+                ]], [[
+                eglGetDisplay(EGL_DEFAULT_DISPLAY);
+                glCreateShader(GL_VERTEX_SHADER);
+                ]])], [
+                AC_MSG_RESULT([yes])
+                AC_MSG_NOTICE([libMali.so is working])
                 AC_DEFINE([HAVE_MALI], [1], [Define if MALI/HiSilicon EGL/GLES is available])
-                MALI_LIBS="-lEGL -lGLESv2"
+                MALI_LIBS="-lMali"
                 have_mali="yes"
-                AC_MSG_NOTICE([Found HiSilicon GPU EGL/GLES2 support])
             ], [
+                AC_MSG_RESULT([no])
+                AC_MSG_WARN([libMali.so found but not working])
                 have_mali="no"
-                AC_MSG_WARN([GLESv2 library not found. Install qviart-opengl-hisi3798mv200-dev package])
             ])
-        ], [
+            LIBS="$save_LIBS"
+        else
+            AC_MSG_RESULT([no])
+            AC_MSG_WARN([libMali.so not found])
             have_mali="no"
-            AC_MSG_WARN([EGL library not found. Install qviart-opengl-hisi3798mv200-dev package])
-        ])
+        fi
     ], [
+        AC_MSG_RESULT([no])
+        AC_MSG_WARN([EGL/GLES headers not found])
         have_mali="no"
-        AC_MSG_WARN([EGL/GLES headers not found. Install qviart-opengl-hisi3798mv200-dev package])
     ])
+], [
+    AC_MSG_NOTICE([MALI support not enabled])
+    have_mali="no"
 ])
 
 AM_CONDITIONAL([HAVE_MALI], [test "x$have_mali" = "xyes"])
 AC_SUBST(MALI_LIBS)
+
+if test "x$have_mali" = "xyes"; then
+    AC_MSG_NOTICE([MALI support enabled and working])
+else
+    AC_MSG_NOTICE([MALI support not available])
+fi
 
 AC_CHECK_LIB([udfread], [udfread_init])
 AC_CHECK_LIB([dl], [dlopen], [LIBDL_LIBS="-ldl"], [AC_MSG_ERROR([Could not find libdl])])
