@@ -237,22 +237,25 @@ void eGLSAnimation::applyRotate(float progress)
 
 void eGLSAnimation::applyBounce(float progress)
 {
-    if (!m_widget)
-        return;
-        
-    ePoint current_pos = m_widget->position();
+    if (!m_widget) return;
+    
+    // Get start and end positions
     ePoint start_pos = m_params.startPos;
     ePoint end_pos = m_params.endPos;
     
-    // Calculate vertical position with bounce effect
-    float bounce_progress = progress; // Removed bounceEaseOut function call
+    // Calculate bounce effect
+    float bounce_height = m_params.amplitude * 100; // Maximum bounce height in pixels
+    float bounce_phase = progress * M_PI * m_params.bounceCount; // Multiple bounces
+    float vertical_offset = bounce_height * (1 - progress) * std::abs(std::sin(bounce_phase));
+    
+    // Calculate horizontal position with linear interpolation
     int x = start_pos.x() + (end_pos.x() - start_pos.x()) * progress;
-    int y = start_pos.y() + (end_pos.y() - start_pos.y()) * bounce_progress;
+    
+    // Calculate vertical position with bounce
+    int y = start_pos.y() + (end_pos.y() - start_pos.y()) * progress - vertical_offset;
     
     m_widget->move(ePoint(x, y));
-    m_widget->invalidate();
-    
-    eDebug("[eGLSAnimation] Bounce: pos=(%d,%d), progress=%.2f", x, y, progress);
+    eDebug("[eGLSAnimation] Bounce: pos=(%d,%d), offset=%.2f", x, y, vertical_offset);
 }
 
 void eGLSAnimation::applyShake(float progress)
