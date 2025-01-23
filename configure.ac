@@ -41,12 +41,13 @@ AC_ARG_ENABLE([mali],
     AS_HELP_STRING([--enable-mali], [Enable MALI GPU support]))
 
 AS_IF([test "x$enable_mali" = "xyes"], [
-    # Check for required MALI libraries
-    AC_CHECK_LIB([EGL], [eglGetDisplay], [
-        AC_CHECK_LIB([GLESv2], [glCreateShader], [
-            AC_DEFINE([HAVE_MALI], [1], [Define if Mali EGL/GLES is available])
-            MALI_LIBS="-lEGL -lGLESv2"
-            have_mali="yes"
+    AC_CHECK_HEADERS([EGL/egl.h GLES2/gl2.h], [
+        AC_CHECK_LIB([EGL], [eglGetDisplay], [
+            AC_CHECK_LIB([GLESv2], [glCreateShader], [
+                AC_DEFINE([HAVE_MALI], [1], [Define if Mali EGL/GLES is available])
+                MALI_LIBS="-lEGL -lGLESv2"
+                have_mali="yes"
+            ], [have_mali="no"])
         ], [have_mali="no"])
     ], [have_mali="no"])
 ])
