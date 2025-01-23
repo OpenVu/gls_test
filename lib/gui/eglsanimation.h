@@ -2,9 +2,12 @@
 #define __lib_gui_eglsanimation_h
 
 #include <lib/base/object.h>
+#include <lib/base/ebase.h>
 #include <lib/gdi/gpixmap.h>
 #include <lib/gui/ewidget.h>
-#include <lib/gui/ewindow.h>
+
+// Forward declarations
+class eTimer;
 
 enum eGLSAnimationType
 {
@@ -44,15 +47,15 @@ struct eGLSAnimationParams
     eGLSAnimationType type;
     eGLSEasingType easing;
     int duration;
-    float startValue;
-    float endValue;
+    int startValue;  // Changed to int for format string compatibility
+    int endValue;    // Changed to int for format string compatibility
     ePoint startPos;
     ePoint endPos;
     ePoint center;
     float rotationAngle;
     int bounceCount;
     float amplitude;
-
+    
     eGLSAnimationParams() : 
         type(TYPE_FADE),
         easing(EASING_SINE_IN_OUT),
@@ -62,7 +65,8 @@ struct eGLSAnimationParams
         rotationAngle(0),
         bounceCount(3),
         amplitude(1.0f)
-    {}
+    {
+    }
 };
 
 class eGLSAnimation: public Object
@@ -77,6 +81,8 @@ public:
     void stop();
     void chain(eGLSAnimation *next);
     eWidget *getWidget() const { return m_widget; }
+    
+    Signal0<void> animationFinished;  // Added signal for animation completion
     
 protected:
     void timerTick();
