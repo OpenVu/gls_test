@@ -7,10 +7,11 @@ DEFINE_REF(eGLSAnimation);
 
 eGLSAnimation::eGLSAnimation(eWidget *widget)
     : m_widget(widget)
-    , m_active(false)
+    , m_timer(eTimer::create(eApp))
+    , m_params()
     , m_current_tick(0)
     , m_total_ticks(0)
-    , m_timer(eTimer::create(eApp))
+    , m_active(false)
 #ifdef HAVE_MALI
     , m_eglDisplay(EGL_NO_DISPLAY)
     , m_eglContext(EGL_NO_CONTEXT)
@@ -22,6 +23,11 @@ eGLSAnimation::eGLSAnimation(eWidget *widget)
     eDebug("[eGLSAnimation] Constructor: widget=%p", widget);
     if (!m_timer) {
         eDebug("[eGLSAnimation] Failed to create timer!");
+        return;
+    }
+    
+    if (!m_widget) {
+        eDebug("[eGLSAnimation] Invalid widget!");
         return;
     }
     
@@ -43,8 +49,45 @@ eGLSAnimation::~eGLSAnimation()
 
 void eGLSAnimation::timerTick()
 {
-    eDebug("[eGLSAnimation] Timer tick");
-    tick();
+    if (!m_active || !m_widget)
+    {
+        eDebug("[eGLSAnimation] Tick skipped: active=%d, widget=%p", m_active, m_widget);
+        stop();
+        return;
+    }
+
+    m_current_tick++;
+    float progress = (float)m_current_tick / m_total_ticks;
+    
+    // Apply easing (simple ease-in-out)
+    progress = progress < 0.5f ? 2.0f * progress * progress : -1.0f + (4.0f - 2.0f * progress) * progress;
+    
+    eDebug("[eGLSAnimation] Tick: %d/%d, progress=%.2f", m_current_tick, m_total_ticks, progress);
+    
+    switch (m_params.type)
+    {
+        case TYPE_FADE:
+            applyFade(progress);
+            break;
+        case TYPE_SLIDE:
+            applySlide(progress);
+            break;
+        case TYPE_ZOOM:
+            applyZoom(progress);
+            break;
+    }
+    
+    if (m_current_tick >= m_total_ticks)
+    {
+        eDebug("[eGLSAnimation] Animation finished");
+        stop();
+        /*emit*/ animationFinished();
+    }
+    else
+    {
+        // Schedule next tick only if we haven't finished
+        m_timer->start(16);
+    }
 }
 
 void eGLSAnimation::start(const eGLSAnimationParams &params)
@@ -70,11 +113,17 @@ void eGLSAnimation::start(const eGLSAnimationParams &params)
     m_params = params;
     m_current_tick = 0;
     m_total_ticks = params.duration / 16;  // 60fps
+    
+    if (m_total_ticks <= 0) {
+        eDebug("[eGLSAnimation] Invalid duration, must be > 16ms");
+        return;
+    }
+    
     m_active = true;
     
     // Start timer for animation updates
     eDebug("[eGLSAnimation] Starting timer with interval=16ms, total_ticks=%d", m_total_ticks);
-    m_timer->startLongTimer(0);  // Start immediately
+    m_timer->start(16);  // Start with 16ms interval
     eDebug("[eGLSAnimation] Timer started");
 }
 
@@ -107,54 +156,15 @@ void eGLSAnimation::resume()
     if (!m_active && m_current_tick < m_total_ticks)
     {
         eDebug("[eGLSAnimation] Resuming animation");
-        m_timer->startLongTimer(0);
+        m_timer->start(16);
         m_active = true;
     }
 }
 
-void eGLSAnimation::tick()
-{
-    if (!m_active || !m_widget)
-    {
-        eDebug("[eGLSAnimation] Tick skipped: active=%d, widget=%p", m_active, m_widget);
-        return;
-    }
-
-    m_current_tick++;
-    float progress = (float)m_current_tick / m_total_ticks;
-    
-    // Apply easing (simple ease-in-out)
-    progress = progress < 0.5f ? 2.0f * progress * progress : -1.0f + (4.0f - 2.0f * progress) * progress;
-    
-    eDebug("[eGLSAnimation] Tick: %d/%d, progress=%.2f", m_current_tick, m_total_ticks, progress);
-    
-    switch (m_params.type)
-    {
-        case TYPE_FADE:
-            applyFade(progress);
-            break;
-        case TYPE_SLIDE:
-            applySlide(progress);
-            break;
-        case TYPE_ZOOM:
-            applyZoom(progress);
-            break;
-    }
-    
-    if (m_current_tick >= m_total_ticks)
-    {
-        eDebug("[eGLSAnimation] Animation finished");
-        stop();
-        animationFinished();
-        return;
-    }
-    
-    // Schedule next tick
-    m_timer->startLongTimer(0);
-}
-
 void eGLSAnimation::applyFade(float progress)
 {
+    if (!m_widget) return;
+    
     int opacity = m_params.startValue + (m_params.endValue - m_params.startValue) * progress;
     eDebug("[eGLSAnimation] Fade: progress=%.2f, opacity=%d", progress, opacity);
     m_widget->setTransparent(100 - opacity);  // Convert opacity to transparency (0-100)
@@ -162,6 +172,8 @@ void eGLSAnimation::applyFade(float progress)
 
 void eGLSAnimation::applySlide(float progress)
 {
+    if (!m_widget) return;
+    
     int x = m_params.startPos.x() + (m_params.endPos.x() - m_params.startPos.x()) * progress;
     int y = m_params.startPos.y() + (m_params.endPos.y() - m_params.startPos.y()) * progress;
     eDebug("[eGLSAnimation] Slide: progress=%.2f, pos=(%d,%d)", progress, x, y);
@@ -177,6 +189,8 @@ void eGLSAnimation::applySlide(float progress)
 
 void eGLSAnimation::applyZoom(float progress)
 {
+    if (!m_widget) return;
+    
     float scale = (m_params.startValue + (m_params.endValue - m_params.startValue) * progress) / 100.0f;
     
     ePoint widgetPos = m_widget->position();
