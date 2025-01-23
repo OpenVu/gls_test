@@ -71,38 +71,77 @@ void eWindow::clearFlag(int flags)
 	m_flags &= ~flags;
 }
 
-void eWindow::setAnimation(eGLSAnimationType type, int duration)
+void eWindow::setAnimation(eGLSAnimation::AnimationType type, int duration)
 {
-    if (!m_animation)
-        m_animation = new eGLSAnimation(this);
-
-    //eGLSAnimation::AnimationParams params;
-    eGLSAnimationParams params;	
-    params.type = type;
-    params.duration = duration;
+    eDebug("[eWindow] Setting animation type=%d, duration=%d", type, duration);
+    
+    if (!m_animation_params)
+    {
+        m_animation_params = new eGLSAnimationParams();
+    }
+    
+    // Default values for animation parameters
+    m_animation_params->type = type;
+    m_animation_params->duration = duration;
+    m_animation_params->easing = EASING_SINE_IN_OUT;
+    m_animation_params->bounceCount = 3;
+    m_animation_params->amplitude = 1.0f;
     
     switch (type)
     {
-        case TYPE_FADE:
-            params.startValue = 0;
-            params.endValue = 100;
+        case eGLSAnimation::TYPE_FADE:
+            m_animation_params->startValue = 0;
+            m_animation_params->endValue = 100;
             break;
             
-        case TYPE_SLIDE:
+        case eGLSAnimation::TYPE_SLIDE:
             {
-                ePoint current = position();
-                params.startPos = ePoint(current.x() - 100, current.y());
-                params.endPos = current;
+                ePoint pos = position();
+                m_animation_params->startPos = ePoint(pos.x() - 100, pos.y());  // Slide from left
+                m_animation_params->endPos = pos;
             }
             break;
             
-        case TYPE_ZOOM:
-            params.startValue = 50;
-            params.endValue = 100;
+        case eGLSAnimation::TYPE_ZOOM:
+            m_animation_params->startValue = 50;  // Start at 50% size
+            m_animation_params->endValue = 100;   // End at 100% size
+            m_animation_params->center = position() + ePoint(size().width() / 2, size().height() / 2);
+            break;
+            
+        case eGLSAnimation::TYPE_ROTATE:
+            m_animation_params->startValue = 0;     // Start at 0 degrees
+            m_animation_params->endValue = 360;     // Full rotation
+            m_animation_params->rotationAngle = 360;
+            m_animation_params->center = position() + ePoint(size().width() / 2, size().height() / 2);
+            break;
+            
+        case eGLSAnimation::TYPE_BOUNCE:
+            {
+                ePoint pos = position();
+                m_animation_params->startPos = ePoint(pos.x(), pos.y() - 100);  // Start above
+                m_animation_params->endPos = pos;
+                m_animation_params->bounceCount = 3;
+                m_animation_params->amplitude = 1.2f;
+                m_animation_params->easing = EASING_BOUNCE_OUT;
+            }
+            break;
+            
+        case eGLSAnimation::TYPE_SHAKE:
+            {
+                ePoint pos = position();
+                m_animation_params->startPos = pos;
+                m_animation_params->endPos = pos;
+                m_animation_params->amplitude = 1.5f;
+                m_animation_params->bounceCount = 5;
+                m_animation_params->easing = EASING_ELASTIC_OUT;
+            }
             break;
     }
     
-    m_animation->start(params);
+    if (!m_animation)
+        m_animation = new eGLSAnimation(this);
+    
+    m_animation->start(*m_animation_params);
 }
 
 void eWindow::clearAnimation()
