@@ -1,6 +1,5 @@
 if HAVE_MALI
-gui_libenigma_gui_a_CPPFLAGS = -DHAVE_MALI $(AM_CPPFLAGS)
-gui_libenigma_gui_a_LIBADD = $(MALI_LIBS)
+AM_CPPFLAGS += -DHAVE_MALI
 endif
 
 noinst_LIBRARIES += gui/libenigma_gui.a
