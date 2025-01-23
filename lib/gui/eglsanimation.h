@@ -6,8 +6,7 @@
 #include <lib/gdi/gpixmap.h>
 #include <lib/gui/ewidget.h>
 
-// Forward declarations
-class eTimer;
+class eGLSAnimation;  // Forward declaration for Object
 
 enum eGLSAnimationType
 {
@@ -82,7 +81,7 @@ public:
     void chain(eGLSAnimation *next);
     eWidget *getWidget() const { return m_widget; }
     
-    Signal0<void> animationFinished;  // Added signal for animation completion
+    PSignal0<void> animationFinished;  // Changed to PSignal0
     
 protected:
     void timerTick();
@@ -109,7 +108,7 @@ protected:
     
 private:
     eWidget *m_widget;
-    eTimer *m_timer;
+    ePtr<eTimer> m_timer;  // Changed to ePtr
     eGLSAnimationParams m_params;
     int m_current_tick;
     int m_total_ticks;
