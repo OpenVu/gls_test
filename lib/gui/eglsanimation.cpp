@@ -2,8 +2,46 @@
 #include <lib/base/init.h>
 #include <lib/base/init_num.h>
 #include <lib/gdi/grc.h>
+#include <cmath>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 DEFINE_REF(eGLSAnimation);
+
+float eGLSAnimation::applyEasing(float t)
+{
+    switch (m_params.easing)
+    {
+        case EASING_LINEAR:
+            return t;
+        
+        case EASING_SINE_IN:
+            return 1.0f - cos((t * M_PI) / 2);
+        case EASING_SINE_OUT:
+            return sin((t * M_PI) / 2);
+        case EASING_SINE_IN_OUT:
+            return -(cos(M_PI * t) - 1) / 2;
+            
+        case EASING_QUAD_IN:
+            return t * t;
+        case EASING_QUAD_OUT:
+            return 1 - (1 - t) * (1 - t);
+        case EASING_QUAD_IN_OUT:
+            return t < 0.5f ? 2 * t * t : 1 - pow(-2 * t + 2, 2) / 2;
+            
+        case EASING_CUBIC_IN:
+            return t * t * t;
+        case EASING_CUBIC_OUT:
+            return 1 - pow(1 - t, 3);
+        case EASING_CUBIC_IN_OUT:
+            return t < 0.5f ? 4 * t * t * t : 1 - pow(-2 * t + 2, 3) / 2;
+            
+        default:
+            return t;
+    }
+}
 
 eGLSAnimation::eGLSAnimation(eWidget *widget)
     : m_widget(widget)
@@ -12,6 +50,7 @@ eGLSAnimation::eGLSAnimation(eWidget *widget)
     , m_current_tick(0)
     , m_total_ticks(0)
     , m_active(false)
+    , m_nextAnimation(0)
 #ifdef HAVE_MALI
     , m_eglDisplay(EGL_NO_DISPLAY)
     , m_eglContext(EGL_NO_CONTEXT)
@@ -39,12 +78,24 @@ eGLSAnimation::eGLSAnimation(eWidget *widget)
 #endif
 }
 
-eGLSAnimation::~eGLSAnimation()
+void eGLSAnimation::chain(eGLSAnimation *nextAnimation)
 {
-#ifdef HAVE_MALI
-    cleanupEGL();
-#endif
-    stop();
+    m_nextAnimation = nextAnimation;
+}
+
+void eGLSAnimation::clearChain()
+{
+    m_nextAnimation = 0;
+}
+
+void eGLSAnimation::onAnimationFinished()
+{
+    if (m_nextAnimation)
+    {
+        eDebug("[eGLSAnimation] Starting chained animation");
+        m_nextAnimation->start(m_nextAnimation->getParams());
+    }
+    /*emit*/ animationFinished();
 }
 
 void eGLSAnimation::timerTick()
@@ -58,9 +109,7 @@ void eGLSAnimation::timerTick()
 
     m_current_tick++;
     float progress = (float)m_current_tick / m_total_ticks;
-    
-    // Apply easing (simple ease-in-out)
-    progress = progress < 0.5f ? 2.0f * progress * progress : -1.0f + (4.0f - 2.0f * progress) * progress;
+    progress = applyEasing(progress);
     
     eDebug("[eGLSAnimation] Tick: %d/%d, progress=%.2f", m_current_tick, m_total_ticks, progress);
     
@@ -81,7 +130,7 @@ void eGLSAnimation::timerTick()
     {
         eDebug("[eGLSAnimation] Animation finished");
         stop();
-        /*emit*/ animationFinished();
+        onAnimationFinished();
     }
     else
     {
@@ -333,3 +382,11 @@ bool eGLSAnimation::createShaders()
     return true;
 }
 #endif
+
+eGLSAnimation::~eGLSAnimation()
+{
+#ifdef HAVE_MALI
+    cleanupEGL();
+#endif
+    stop();
+}
