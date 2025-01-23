@@ -24,8 +24,22 @@ enum eGLSAnimationType {
     TYPE_ZOOM = 2
 };
 
+enum eGLSEasingType {
+    EASING_LINEAR = 0,
+    EASING_SINE_IN = 1,
+    EASING_SINE_OUT = 2,
+    EASING_SINE_IN_OUT = 3,
+    EASING_QUAD_IN = 4,
+    EASING_QUAD_OUT = 5,
+    EASING_QUAD_IN_OUT = 6,
+    EASING_CUBIC_IN = 7,
+    EASING_CUBIC_OUT = 8,
+    EASING_CUBIC_IN_OUT = 9
+};
+
 struct eGLSAnimationParams {
     eGLSAnimationType type;
+    eGLSEasingType easing;
     int startValue;
     int endValue;
     int duration;  // in milliseconds
@@ -35,9 +49,11 @@ struct eGLSAnimationParams {
 
     eGLSAnimationParams() : 
         type(TYPE_FADE),
+        easing(EASING_SINE_IN_OUT),
         startValue(0),
         endValue(100),
-        duration(1000) {}
+        duration(1000)
+    {}
 };
 
 class eGLSAnimation : public iObject
@@ -51,6 +67,7 @@ private:
     int m_current_tick;
     int m_total_ticks;
     bool m_active;
+    ePtr<eGLSAnimation> m_nextAnimation;  // For animation chaining
 
 #ifdef HAVE_MALI
     EGLDisplay m_eglDisplay;
@@ -63,6 +80,7 @@ private:
     void applyFade(float progress);
     void applySlide(float progress);
     void applyZoom(float progress);
+    float applyEasing(float progress);
 
 #ifdef HAVE_MALI
     bool initEGL();
@@ -72,6 +90,7 @@ private:
 
 protected:
     void timerTick();
+    void onAnimationFinished();
 
 public:
     eGLSAnimation(eWidget *widget);
@@ -82,11 +101,16 @@ public:
     void pause();
     void resume();
 
-    // Getter for widget
-    eWidget *getWidget() const { return m_widget; }
-    PSignal0<void> animationFinished;
+    // Animation chaining
+    void chain(eGLSAnimation *nextAnimation);
+    void clearChain();
 
-    bool isRunning() const { return m_active; }
+    // Getters
+    eWidget *getWidget() const { return m_widget; }
+    bool isActive() const { return m_active; }
+    const eGLSAnimationParams &getParams() const { return m_params; }
+
+    PSignal0<void> animationFinished;
 };
 
 #endif // __lib_gui_eglsanimation_h
