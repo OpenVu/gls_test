@@ -24,7 +24,9 @@ enum eGLSAnimationType {
     TYPE_ZOOM = 2,
     TYPE_ROTATE = 3,
     TYPE_BOUNCE = 4,
-    TYPE_SHAKE = 5
+    TYPE_SHAKE = 5,
+    TYPE_BLUR = 6,
+    TYPE_FLIP = 7
 };
 
 enum eGLSEasingType {
@@ -101,6 +103,8 @@ private:
     void applyRotate(float progress);
     void applyBounce(float progress);
     void applyShake(float progress);
+    void applyBlur(float progress);
+    void applyFlip(float progress);
     
     float applyEasing(float progress);
     float bounceEaseIn(float t);
