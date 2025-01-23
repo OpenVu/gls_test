@@ -81,7 +81,6 @@ public:
     void stop();
     void pause();
     void resume();
-    void tick();
 
     PSignal0<void> animationFinished;
 
