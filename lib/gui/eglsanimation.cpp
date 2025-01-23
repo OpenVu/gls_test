@@ -38,9 +38,122 @@ float eGLSAnimation::applyEasing(float t)
         case EASING_CUBIC_IN_OUT:
             return t < 0.5f ? 4 * t * t * t : 1 - pow(-2 * t + 2, 3) / 2;
             
+        case EASING_BOUNCE_IN:
+            return bounceEaseIn(t);
+        case EASING_BOUNCE_OUT:
+            return bounceEaseOut(t);
+        case EASING_BOUNCE_IN_OUT:
+            return bounceEaseInOut(t);
+            
+        case EASING_ELASTIC_IN:
+            return elasticEaseIn(t);
+        case EASING_ELASTIC_OUT:
+            return elasticEaseOut(t);
+        case EASING_ELASTIC_IN_OUT:
+            return elasticEaseInOut(t);
+            
+        case EASING_BACK_IN:
+            return backEaseIn(t);
+        case EASING_BACK_OUT:
+            return backEaseOut(t);
+        case EASING_BACK_IN_OUT:
+            return backEaseInOut(t);
+            
         default:
             return t;
     }
+}
+
+float eGLSAnimation::bounceEaseOut(float t) 
+{
+    const float n1 = 7.5625f;
+    const float d1 = 2.75f;
+    
+    if (t < 1 / d1) {
+        return n1 * t * t;
+    } else if (t < 2 / d1) {
+        t -= 1.5f / d1;
+        return n1 * t * t + 0.75f;
+    } else if (t < 2.5f / d1) {
+        t -= 2.25f / d1;
+        return n1 * t * t + 0.9375f;
+    } else {
+        t -= 2.625f / d1;
+        return n1 * t * t + 0.984375f;
+    }
+}
+
+float eGLSAnimation::bounceEaseIn(float t) 
+{
+    return 1 - bounceEaseOut(1 - t);
+}
+
+float eGLSAnimation::bounceEaseInOut(float t) 
+{
+    return t < 0.5f
+        ? (1 - bounceEaseOut(1 - 2 * t)) / 2
+        : (1 + bounceEaseOut(2 * t - 1)) / 2;
+}
+
+float eGLSAnimation::elasticEaseIn(float t) 
+{
+    const float c4 = (2 * M_PI) / 3;
+    
+    return t == 0
+        ? 0
+        : t == 1
+        ? 1
+        : -pow(2, 10 * t - 10) * sin((t * 10 - 10.75f) * c4);
+}
+
+float eGLSAnimation::elasticEaseOut(float t) 
+{
+    const float c4 = (2 * M_PI) / 3;
+    
+    return t == 0
+        ? 0
+        : t == 1
+        ? 1
+        : pow(2, -10 * t) * sin((t * 10 - 0.75f) * c4) + 1;
+}
+
+float eGLSAnimation::elasticEaseInOut(float t) 
+{
+    const float c5 = (2 * M_PI) / 4.5f;
+    
+    return t == 0
+        ? 0
+        : t == 1
+        ? 1
+        : t < 0.5f
+        ? -(pow(2, 20 * t - 10) * sin((20 * t - 11.125f) * c5)) / 2
+        : (pow(2, -20 * t + 10) * sin((20 * t - 11.125f) * c5)) / 2 + 1;
+}
+
+float eGLSAnimation::backEaseIn(float t)
+{
+    const float c1 = 1.70158f;
+    const float c3 = c1 + 1;
+    
+    return c3 * t * t * t - c1 * t * t;
+}
+
+float eGLSAnimation::backEaseOut(float t)
+{
+    const float c1 = 1.70158f;
+    const float c3 = c1 + 1;
+    
+    return 1 + c3 * pow(t - 1, 3) + c1 * pow(t - 1, 2);
+}
+
+float eGLSAnimation::backEaseInOut(float t)
+{
+    const float c1 = 1.70158f;
+    const float c2 = c1 * 1.525f;
+    
+    return t < 0.5f
+        ? (pow(2 * t, 2) * ((c2 + 1) * 2 * t - c2)) / 2
+        : (pow(2 * t - 2, 2) * ((c2 + 1) * (t * 2 - 2) + c2) + 2) / 2;
 }
 
 eGLSAnimation::eGLSAnimation(eWidget *widget)
