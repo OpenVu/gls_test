@@ -35,7 +35,14 @@ eGLSAnimation::eGLSAnimation(eWidget *widget)
     eDebug("[eGLSAnimation] Timer connected");
     
 #ifdef HAVE_MALI
-    initEGL();
+    if (initEGL()) {
+        eDebug("[eGLSAnimation] Successfully initialized GLES hardware acceleration");
+    } else {
+        eDebug("[eGLSAnimation] Failed to initialize GLES, falling back to software rendering");
+        cleanupEGL();
+    }
+#else
+    eDebug("[eGLSAnimation] GLES support not compiled in, using software rendering");
 #endif
 }
 
