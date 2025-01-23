@@ -18,149 +18,6 @@ inline bool isNearlyEqual(float a, float b) {
 
 DEFINE_REF(eGLSAnimation);
 
-float eGLSAnimation::applyEasing(float t)
-{
-    switch (m_params.easing)
-    {
-        case EASING_LINEAR:
-            return t;
-        
-        case EASING_SINE_IN:
-            return 1.0f - cos((t * M_PI) / 2);
-        case EASING_SINE_OUT:
-            return sin((t * M_PI) / 2);
-        case EASING_SINE_IN_OUT:
-            return -(cos(M_PI * t) - 1) / 2;
-            
-        case EASING_QUAD_IN:
-            return t * t;
-        case EASING_QUAD_OUT:
-            return 1 - (1 - t) * (1 - t);
-        case EASING_QUAD_IN_OUT:
-            return t < 0.5f ? 2 * t * t : 1 - pow(-2 * t + 2, 2) / 2;
-            
-        case EASING_CUBIC_IN:
-            return t * t * t;
-        case EASING_CUBIC_OUT:
-            return 1 - pow(1 - t, 3);
-        case EASING_CUBIC_IN_OUT:
-            return t < 0.5f ? 4 * t * t * t : 1 - pow(-2 * t + 2, 3) / 2;
-            
-        case EASING_BOUNCE_IN:
-            return bounceEaseIn(t);
-        case EASING_BOUNCE_OUT:
-            return bounceEaseOut(t);
-        case EASING_BOUNCE_IN_OUT:
-            return bounceEaseInOut(t);
-            
-        case EASING_ELASTIC_IN:
-            return elasticEaseIn(t);
-        case EASING_ELASTIC_OUT:
-            return elasticEaseOut(t);
-        case EASING_ELASTIC_IN_OUT:
-            return elasticEaseInOut(t);
-            
-        case EASING_BACK_IN:
-            return backEaseIn(t);
-        case EASING_BACK_OUT:
-            return backEaseOut(t);
-        case EASING_BACK_IN_OUT:
-            return backEaseInOut(t);
-            
-        default:
-            return t;
-    }
-}
-
-float eGLSAnimation::bounceEaseOut(float t) 
-{
-    const float n1 = 7.5625f;
-    const float d1 = 2.75f;
-    
-    if (t < 1 / d1) {
-        return n1 * t * t;
-    } else if (t < 2 / d1) {
-        t -= 1.5f / d1;
-        return n1 * t * t + 0.75f;
-    } else if (t < 2.5f / d1) {
-        t -= 2.25f / d1;
-        return n1 * t * t + 0.9375f;
-    } else {
-        t -= 2.625f / d1;
-        return n1 * t * t + 0.984375f;
-    }
-}
-
-float eGLSAnimation::bounceEaseIn(float t) 
-{
-    return 1 - bounceEaseOut(1 - t);
-}
-
-float eGLSAnimation::bounceEaseInOut(float t) 
-{
-    return t < 0.5f
-        ? (1 - bounceEaseOut(1 - 2 * t)) / 2
-        : (1 + bounceEaseOut(2 * t - 1)) / 2;
-}
-
-float eGLSAnimation::elasticEaseIn(float t) 
-{
-    const float c4 = (2 * M_PI) / 3;
-    
-    if (isNearlyEqual(t, 0.0f)) return 0;
-    if (isNearlyEqual(t, 1.0f)) return 1;
-    
-    return -pow(2, 10 * t - 10) * sin((t * 10 - 10.75f) * c4);
-}
-
-float eGLSAnimation::elasticEaseOut(float t) 
-{
-    const float c4 = (2 * M_PI) / 3;
-    
-    if (isNearlyEqual(t, 0.0f)) return 0;
-    if (isNearlyEqual(t, 1.0f)) return 1;
-    
-    return pow(2, -10 * t) * sin((t * 10 - 0.75f) * c4) + 1;
-}
-
-float eGLSAnimation::elasticEaseInOut(float t) 
-{
-    const float c5 = (2 * M_PI) / 4.5f;
-    
-    if (isNearlyEqual(t, 0.0f)) return 0;
-    if (isNearlyEqual(t, 1.0f)) return 1;
-    
-    return t < 0.5f
-        ? -(pow(2, 20 * t - 10) * sin((20 * t - 11.125f) * c5)) / 2
-        : (pow(2, -20 * t + 10) * sin((20 * t - 11.125f) * c5)) / 2 + 1;
-}
-
-float eGLSAnimation::backEaseIn(float t)
-{
-    const float c1 = 1.70158f;
-    const float c3 = c1 + 1;
-    
-    return c3 * t * t * t - c1 * t * t;
-}
-
-float eGLSAnimation::backEaseOut(float t)
-{
-    const float c1 = 1.70158f;
-    const float c3 = c1 + 1;
-    
-    return 1 + c3 * pow(t - 1, 3) + c1 * pow(t - 1, 2);
-}
-
-float eGLSAnimation::backEaseInOut(float t)
-{
-    const float c1 = 1.70158f;
-    const float c2 = c1 * 1.525f;
-    
-    return t < 0.5f
-        ? (pow(2 * t, 2) * ((c2 + 1) * 2 * t - c2)) / 2
-        : (pow(2 * t - 2, 2) * ((c2 + 1) * (t * 2 - 2) + c2) + 2) / 2;
-}
-
 eGLSAnimation::eGLSAnimation(eWidget *widget)
     : m_widget(widget)
     , m_timer(eTimer::create(eApp))
@@ -170,77 +27,12 @@ eGLSAnimation::eGLSAnimation(eWidget *widget)
     , m_next_animation(0)
 {
     CONNECT(m_timer->timeout, eGLSAnimation::timerTick);
-    eDebug("[eGLSAnimation] Constructor: widget=%p", widget);
 }
 
-void eGLSAnimation::chain(eGLSAnimation *next)
+eGLSAnimation::~eGLSAnimation()
 {
-    m_next_animation = next;
-}
-
-void eGLSAnimation::clearChain()
-{
-    m_next_animation = 0;
-}
-
-void eGLSAnimation::onAnimationFinished()
-{
-    if (m_next_animation)
-    {
-        eDebug("[eGLSAnimation] Starting chained animation");
-        m_next_animation->start(m_next_animation->m_params);
-    }
-    /*emit*/ animationFinished();
-}
-
-void eGLSAnimation::timerTick()
-{
-    if (!m_active || !m_widget)
-    {
-        eDebug("[eGLSAnimation] Tick skipped: active=%d, widget=%p", m_active, m_widget);
-        stop();
-        return;
-    }
-
-    m_current_tick++;
-    float progress = (float)m_current_tick / m_total_ticks;
-    progress = applyEasing(progress);
-    
-    eDebug("[eGLSAnimation] Tick: %d/%d, progress=%.2f", m_current_tick, m_total_ticks, progress);
-    
-    switch (m_params.type)
-    {
-        case TYPE_FADE:
-            applyFade(progress);
-            break;
-        case TYPE_SLIDE:
-            applySlide(progress);
-            break;
-        case TYPE_ZOOM:
-            applyZoom(progress);
-            break;
-        case TYPE_ROTATE:
-            applyRotate(progress);
-            break;
-        case TYPE_BOUNCE:
-            applyBounce(progress);
-            break;
-        case TYPE_SHAKE:
-            applyShake(progress);
-            break;
-    }
-    
-    if (m_current_tick >= m_total_ticks)
-    {
-        eDebug("[eGLSAnimation] Animation finished");
-        stop();
-        onAnimationFinished();
-    }
-    else
-    {
-        // Schedule next tick only if we haven't finished
-        m_timer->start(16);
-    }
+    stop();
+    m_timer = 0;  // Smart pointer will handle cleanup
 }
 
 void eGLSAnimation::start(const eGLSAnimationParams &params)
@@ -284,23 +76,67 @@ void eGLSAnimation::stop()
     m_active = false;
 }
 
-void eGLSAnimation::pause()
+void eGLSAnimation::chain(eGLSAnimation *next)
 {
-    if (m_active)
-    {
-        eDebug("[eGLSAnimation] Pausing animation");
-        m_timer->stop();
-        m_active = false;
-    }
+    m_next_animation = next;
 }
 
-void eGLSAnimation::resume()
+void eGLSAnimation::onAnimationFinished()
 {
-    if (!m_active && m_current_tick < m_total_ticks)
+    if (m_next_animation)
     {
-        eDebug("[eGLSAnimation] Resuming animation");
+        m_next_animation->start(m_next_animation->m_params);
+    }
+    
+    /*emit*/ animationFinished();
+}
+
+void eGLSAnimation::timerTick()
+{
+    if (!m_active || !m_widget)
+    {
+        eDebug("[eGLSAnimation] Tick skipped: active=%d, widget=%p", m_active, m_widget);
+        stop();
+        return;
+    }
+
+    m_current_tick++;
+    float progress = (float)m_current_tick / m_total_ticks;
+    
+    eDebug("[eGLSAnimation] Tick: %d/%d, progress=%.2f", m_current_tick, m_total_ticks, progress);
+    
+    switch (m_params.type)
+    {
+        case TYPE_FADE:
+            applyFade(progress);
+            break;
+        case TYPE_SLIDE:
+            applySlide(progress);
+            break;
+        case TYPE_ZOOM:
+            applyZoom(progress);
+            break;
+        case TYPE_ROTATE:
+            applyRotate(progress);
+            break;
+        case TYPE_BOUNCE:
+            applyBounce(progress);
+            break;
+        case TYPE_SHAKE:
+            applyShake(progress);
+            break;
+    }
+    
+    if (m_current_tick >= m_total_ticks)
+    {
+        eDebug("[eGLSAnimation] Animation finished");
+        stop();
+        onAnimationFinished();
+    }
+    else
+    {
+        // Schedule next tick only if we haven't finished
         m_timer->start(16);
-        m_active = true;
     }
 }
 
@@ -409,7 +245,7 @@ void eGLSAnimation::applyBounce(float progress)
     ePoint end_pos = m_params.endPos;
     
     // Calculate vertical position with bounce effect
-    float bounce_progress = bounceEaseOut(progress);
+    float bounce_progress = progress; // Removed bounceEaseOut function call
     int x = start_pos.x() + (end_pos.x() - start_pos.x()) * progress;
     int y = start_pos.y() + (end_pos.y() - start_pos.y()) * bounce_progress;
     
@@ -438,121 +274,4 @@ void eGLSAnimation::applyShake(float progress)
     m_widget->invalidate();
     
     eDebug("[eGLSAnimation] Shake: pos=(%d,%d), offset=%.2f", x, y, shake_offset);
-}
-
-#ifdef HAVE_MALI
-bool eGLSAnimation::initEGL()
-{
-    m_eglDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-    if (m_eglDisplay == EGL_NO_DISPLAY)
-        return false;
-
-    EGLint major, minor;
-    if (!eglInitialize(m_eglDisplay, &major, &minor))
-        return false;
-
-    const EGLint configAttribs[] = {
-        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
-        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
-        EGL_RED_SIZE, 8,
-        EGL_GREEN_SIZE, 8,
-        EGL_BLUE_SIZE, 8,
-        EGL_ALPHA_SIZE, 8,
-        EGL_NONE
-    };
-
-    EGLint numConfigs;
-    if (!eglChooseConfig(m_eglDisplay, configAttribs, &m_eglConfig, 1, &numConfigs))
-        return false;
-
-    const EGLint contextAttribs[] = {
-        EGL_CONTEXT_CLIENT_VERSION, 2,
-        EGL_NONE
-    };
-
-    m_eglContext = eglCreateContext(m_eglDisplay, m_eglConfig, EGL_NO_CONTEXT, contextAttribs);
-    if (m_eglContext == EGL_NO_CONTEXT)
-        return false;
-
-    return createShaders();
-}
-
-void eGLSAnimation::cleanupEGL()
-{
-    if (m_eglDisplay != EGL_NO_DISPLAY)
-    {
-        if (m_eglContext != EGL_NO_CONTEXT)
-        {
-            eglDestroyContext(m_eglDisplay, m_eglContext);
-            m_eglContext = EGL_NO_CONTEXT;
-        }
-        if (m_eglSurface != EGL_NO_SURFACE)
-        {
-            eglDestroySurface(m_eglDisplay, m_eglSurface);
-            m_eglSurface = EGL_NO_SURFACE;
-        }
-        eglTerminate(m_eglDisplay);
-        m_eglDisplay = EGL_NO_DISPLAY;
-    }
-
-    if (m_program)
-    {
-        glDeleteProgram(m_program);
-        m_program = 0;
-    }
-    if (m_texture)
-    {
-        glDeleteTextures(1, &m_texture);
-        m_texture = 0;
-    }
-}
-
-bool eGLSAnimation::createShaders()
-{
-    const char *vertexShader =
-        "attribute vec4 position;\n"
-        "attribute vec2 texcoord;\n"
-        "varying vec2 v_texcoord;\n"
-        "void main() {\n"
-        "    gl_Position = position;\n"
-        "    v_texcoord = texcoord;\n"
-        "}\n";
-
-    const char *fragmentShader =
-        "precision mediump float;\n"
-        "varying vec2 v_texcoord;\n"
-        "uniform sampler2D texture;\n"
-        "uniform float alpha;\n"
-        "void main() {\n"
-        "    vec4 color = texture2D(texture, v_texcoord);\n"
-        "    gl_FragColor = vec4(color.rgb, color.a * alpha);\n"
-        "}\n";
-
-    GLuint vs = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vs, 1, &vertexShader, NULL);
-    glCompileShader(vs);
-
-    GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fs, 1, &fragmentShader, NULL);
-    glCompileShader(fs);
-
-    m_program = glCreateProgram();
-    glAttachShader(m_program, vs);
-    glAttachShader(m_program, fs);
-    glLinkProgram(m_program);
-
-    glDeleteShader(vs);
-    glDeleteShader(fs);
-
-    return true;
-}
-#endif
-
-eGLSAnimation::~eGLSAnimation()
-{
-    stop();
-    m_timer = 0;  // Smart pointer will handle cleanup
-#ifdef HAVE_MALI
-    cleanupEGL();
-#endif
 }
