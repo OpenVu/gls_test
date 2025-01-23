@@ -44,6 +44,7 @@ private:
     int m_flags;
     eWidgetDesktop *m_desktop;
     ePtr<eGLSAnimation> m_animation;
+    eGLSAnimationParams *m_animation_params;
 };
 
 #endif
