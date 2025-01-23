@@ -26,6 +26,11 @@ eGLSAnimation::eGLSAnimation(eWidget *widget)
         return;
     }
     
+    if (!m_widget) {
+        eDebug("[eGLSAnimation] Invalid widget!");
+        return;
+    }
+    
     m_timer->timeout.connect(sigc::mem_fun(*this, &eGLSAnimation::timerTick));
     eDebug("[eGLSAnimation] Timer connected");
     
@@ -44,11 +49,10 @@ eGLSAnimation::~eGLSAnimation()
 
 void eGLSAnimation::timerTick()
 {
-    eDebug("[eGLSAnimation] Timer tick");
-    
     if (!m_active || !m_widget)
     {
         eDebug("[eGLSAnimation] Tick skipped: active=%d, widget=%p", m_active, m_widget);
+        stop();
         return;
     }
 
@@ -78,6 +82,11 @@ void eGLSAnimation::timerTick()
         eDebug("[eGLSAnimation] Animation finished");
         stop();
         /*emit*/ animationFinished();
+    }
+    else
+    {
+        // Schedule next tick only if we haven't finished
+        m_timer->start(16);
     }
 }
 
@@ -154,6 +163,8 @@ void eGLSAnimation::resume()
 
 void eGLSAnimation::applyFade(float progress)
 {
+    if (!m_widget) return;
+    
     int opacity = m_params.startValue + (m_params.endValue - m_params.startValue) * progress;
     eDebug("[eGLSAnimation] Fade: progress=%.2f, opacity=%d", progress, opacity);
     m_widget->setTransparent(100 - opacity);  // Convert opacity to transparency (0-100)
@@ -161,6 +172,8 @@ void eGLSAnimation::applyFade(float progress)
 
 void eGLSAnimation::applySlide(float progress)
 {
+    if (!m_widget) return;
+    
     int x = m_params.startPos.x() + (m_params.endPos.x() - m_params.startPos.x()) * progress;
     int y = m_params.startPos.y() + (m_params.endPos.y() - m_params.startPos.y()) * progress;
     eDebug("[eGLSAnimation] Slide: progress=%.2f, pos=(%d,%d)", progress, x, y);
@@ -176,6 +189,8 @@ void eGLSAnimation::applySlide(float progress)
 
 void eGLSAnimation::applyZoom(float progress)
 {
+    if (!m_widget) return;
+    
     float scale = (m_params.startValue + (m_params.endValue - m_params.startValue) * progress) / 100.0f;
     
     ePoint widgetPos = m_widget->position();
