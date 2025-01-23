@@ -4,43 +4,46 @@
 #include <lib/gui/ewidget.h>
 #include <lib/gui/eglsanimation.h>
 
+class eWidgetDesktop;
+
 class eWindow: public eWidget
 {
-    DECLARE_REF(eWindow);
+    friend class eWindowStyle;
 public:
+    eWindow(eWidgetDesktop *desktop, int z = 0);
+    ~eWindow();
+    void setTitle(const std::string &string);
+    std::string getTitle() const;
+    eWidget *child() { return m_child; }
+
     enum {
         wfNoBorder = 1,
         flagHasTrans = 2,
         flagNoAnimated = 4
     };
-    
-    eWindow(eWidget *parent, int flags=0);
-    ~eWindow();
-    
-    void setTitle(const std::string &string);
-    std::string getTitle() const { return m_title; }
+
     void setBackgroundColor(const gRGB &col);
+
+    void setFlag(int flags);
+    void clearFlag(int flags);
     
-    void setFlags(int flags) { m_flags |= flags; }
-    void clearFlags(int flags) { m_flags &= ~flags; }
-    
+    // GLS Animation support
     void setAnimation(eGLSAnimationType type, int duration = 500);
     void clearAnimation();
-    
+
 protected:
-    int event(int event, void *data=0, void *data2=0);
-    
-private:
     enum eWindowEvents
     {
         evtTitleChanged = evtUserWidget,
     };
-    
-    ePtr<eGLSAnimation> m_animation;
-    eGLSAnimationParams *m_animation_params;
+    int event(int event, void *data=0, void *data2=0);
+
+private:
     std::string m_title;
-    int m_flags;
     eWidget *m_child;
+    int m_flags;
+    eWidgetDesktop *m_desktop;
+    ePtr<eGLSAnimation> m_animation;
 };
 
 #endif
