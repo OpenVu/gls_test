@@ -21,6 +21,12 @@ eGLSAnimation::eGLSAnimation(eWidget *widget)
 #endif
 {
     eDebug("[eGLSAnimation] Constructor: widget=%p", widget);
+#ifdef HAVE_MALI
+    eDebug("[eGLSAnimation] Compiled with MALI/GLES support");
+#else
+    eDebug("[eGLSAnimation] Compiled without MALI/GLES support");
+#endif
+
     if (!m_timer) {
         eDebug("[eGLSAnimation] Failed to create timer!");
         return;
@@ -35,6 +41,7 @@ eGLSAnimation::eGLSAnimation(eWidget *widget)
     eDebug("[eGLSAnimation] Timer connected");
     
 #ifdef HAVE_MALI
+    eDebug("[eGLSAnimation] Attempting to initialize GLES...");
     if (initEGL()) {
         eDebug("[eGLSAnimation] Successfully initialized GLES hardware acceleration");
     } else {
@@ -270,13 +277,20 @@ void eGLSAnimation::applyZoom(float progress)
 #ifdef HAVE_MALI
 bool eGLSAnimation::initEGL()
 {
+    eDebug("[eGLSAnimation] initEGL: Getting display...");
     m_eglDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-    if (m_eglDisplay == EGL_NO_DISPLAY)
+    if (m_eglDisplay == EGL_NO_DISPLAY) {
+        eDebug("[eGLSAnimation] initEGL: Failed to get display");
         return false;
+    }
 
+    eDebug("[eGLSAnimation] initEGL: Initializing EGL...");
     EGLint major, minor;
-    if (!eglInitialize(m_eglDisplay, &major, &minor))
+    if (!eglInitialize(m_eglDisplay, &major, &minor)) {
+        eDebug("[eGLSAnimation] initEGL: Failed to initialize EGL");
         return false;
+    }
+    eDebug("[eGLSAnimation] initEGL: EGL version %d.%d", major, minor);
 
     const EGLint configAttribs[] = {
         EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
@@ -288,19 +302,26 @@ bool eGLSAnimation::initEGL()
         EGL_NONE
     };
 
+    eDebug("[eGLSAnimation] initEGL: Choosing config...");
     EGLint numConfigs;
-    if (!eglChooseConfig(m_eglDisplay, configAttribs, &m_eglConfig, 1, &numConfigs))
+    if (!eglChooseConfig(m_eglDisplay, configAttribs, &m_eglConfig, 1, &numConfigs)) {
+        eDebug("[eGLSAnimation] initEGL: Failed to choose config");
         return false;
+    }
 
     const EGLint contextAttribs[] = {
         EGL_CONTEXT_CLIENT_VERSION, 2,
         EGL_NONE
     };
 
+    eDebug("[eGLSAnimation] initEGL: Creating context...");
     m_eglContext = eglCreateContext(m_eglDisplay, m_eglConfig, EGL_NO_CONTEXT, contextAttribs);
-    if (m_eglContext == EGL_NO_CONTEXT)
+    if (m_eglContext == EGL_NO_CONTEXT) {
+        eDebug("[eGLSAnimation] initEGL: Failed to create context");
         return false;
+    }
 
+    eDebug("[eGLSAnimation] initEGL: Creating shaders...");
     return createShaders();
 }
 
