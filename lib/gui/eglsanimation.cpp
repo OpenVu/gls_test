@@ -163,55 +163,32 @@ float eGLSAnimation::backEaseInOut(float t)
 
 eGLSAnimation::eGLSAnimation(eWidget *widget)
     : m_widget(widget)
-    , m_timer(eTimer::create(eApp))
-    , m_params()
+    , m_timer(new eTimer)
     , m_current_tick(0)
     , m_total_ticks(0)
     , m_active(false)
-    , m_nextAnimation(0)
-#ifdef HAVE_MALI
-    , m_eglDisplay(EGL_NO_DISPLAY)
-    , m_eglContext(EGL_NO_CONTEXT)
-    , m_eglSurface(EGL_NO_SURFACE)
-    , m_program(0)
-    , m_texture(0)
-#endif
+    , m_next_animation(0)
 {
+    CONNECT(m_timer->timeout, eGLSAnimation::timerTick);
     eDebug("[eGLSAnimation] Constructor: widget=%p", widget);
-    if (!m_timer) {
-        eDebug("[eGLSAnimation] Failed to create timer!");
-        return;
-    }
-    
-    if (!m_widget) {
-        eDebug("[eGLSAnimation] Invalid widget!");
-        return;
-    }
-    
-    m_timer->timeout.connect(sigc::mem_fun(*this, &eGLSAnimation::timerTick));
-    eDebug("[eGLSAnimation] Timer connected");
-    
-#ifdef HAVE_MALI
-    initEGL();
-#endif
 }
 
-void eGLSAnimation::chain(eGLSAnimation *nextAnimation)
+void eGLSAnimation::chain(eGLSAnimation *next)
 {
-    m_nextAnimation = nextAnimation;
+    m_next_animation = next;
 }
 
 void eGLSAnimation::clearChain()
 {
-    m_nextAnimation = 0;
+    m_next_animation = 0;
 }
 
 void eGLSAnimation::onAnimationFinished()
 {
-    if (m_nextAnimation)
+    if (m_next_animation)
     {
         eDebug("[eGLSAnimation] Starting chained animation");
-        m_nextAnimation->start(m_nextAnimation->getParams());
+        m_next_animation->start(m_next_animation->m_params);
     }
     /*emit*/ animationFinished();
 }
@@ -268,53 +245,43 @@ void eGLSAnimation::timerTick()
 
 void eGLSAnimation::start(const eGLSAnimationParams &params)
 {
-    eDebug("[eGLSAnimation] Starting animation type=%d, duration=%d, startValue=%d, endValue=%d",
-           params.type, params.duration, params.startValue, params.endValue);
-           
-    if (!m_timer) {
-        eDebug("[eGLSAnimation] No timer available!");
+    if (!m_widget)
+    {
+        eDebug("[eGLSAnimation] No widget set!");
         return;
     }
     
-    if (!m_widget) {
-        eDebug("[eGLSAnimation] No widget available!");
-        return;
-    }
-           
-    if (m_active) {
-        eDebug("[eGLSAnimation] Stopping previous animation");
-        stop();
-    }
-
+    stop();
+    
     m_params = params;
     m_current_tick = 0;
-    m_total_ticks = params.duration / 16;  // 60fps
-    
-    if (m_total_ticks <= 0) {
-        eDebug("[eGLSAnimation] Invalid duration, must be > 16ms");
-        return;
-    }
-    
+    m_total_ticks = std::max(1, m_params.duration / 16);  // 16ms per frame (60fps)
     m_active = true;
     
-    // Start timer for animation updates
-    eDebug("[eGLSAnimation] Starting timer with interval=16ms, total_ticks=%d", m_total_ticks);
-    m_timer->start(16);  // Start with 16ms interval
-    eDebug("[eGLSAnimation] Timer started");
+    eDebug("[eGLSAnimation] Starting animation type=%d, duration=%d, startValue=%d, endValue=%d",
+           (int)params.type, params.duration, params.startValue, params.endValue);
+    
+    // Store initial position for position-based animations
+    if (m_params.type == TYPE_SLIDE || m_params.type == TYPE_BOUNCE || m_params.type == TYPE_SHAKE)
+    {
+        m_params.startPos = m_widget->position();
+    }
+    
+    // Store center point for rotate/zoom animations
+    if (m_params.type == TYPE_ROTATE || m_params.type == TYPE_ZOOM)
+    {
+        eSize size = m_widget->size();
+        m_params.center = m_widget->position() + ePoint(size.width() / 2, size.height() / 2);
+    }
+    
+    m_timer->start(16, true);  // 16ms interval for smooth animation
 }
 
 void eGLSAnimation::stop()
 {
-    if (m_active)
-    {
-        eDebug("[eGLSAnimation] Stopping animation");
-        if (m_timer) {
-            m_timer->stop();
-            eDebug("[eGLSAnimation] Timer stopped");
-        }
-        m_active = false;
-        m_current_tick = 0;
-    }
+    if (m_timer)
+        m_timer->stop();
+    m_active = false;
 }
 
 void eGLSAnimation::pause()
@@ -583,8 +550,9 @@ bool eGLSAnimation::createShaders()
 
 eGLSAnimation::~eGLSAnimation()
 {
+    stop();
+    delete m_timer;
 #ifdef HAVE_MALI
     cleanupEGL();
 #endif
-    stop();
 }
