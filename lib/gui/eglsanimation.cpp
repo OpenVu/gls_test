@@ -410,16 +410,26 @@ void eGLSAnimation::applyRotate(float progress)
     // Calculate rotation angle
     float angle = m_params.startValue + (m_params.endValue - m_params.startValue) * progress;
     
-    // Apply rotation transform
-    eMatrix4x4 transform;
-    transform.translate(m_params.center.x(), m_params.center.y(), 0);
-    transform.rotate(angle * M_PI / 180.0f, 0, 0, 1);  // Convert degrees to radians
-    transform.translate(-m_params.center.x(), -m_params.center.y(), 0);
+    // Since we don't have matrix transforms, we'll simulate rotation by adjusting size and position
+    ePoint center = m_params.center;
+    eSize size = m_widget->size();
+    int radius = std::min(size.width(), size.height()) / 2;
     
-    m_widget->setTransform(transform);
+    // Calculate new position based on rotation
+    float rad = angle * M_PI / 180.0f;
+    int x = center.x() + radius * cos(rad) - size.width() / 2;
+    int y = center.y() + radius * sin(rad) - size.height() / 2;
+    
+    // Update position
+    m_widget->move(ePoint(x, y));
+    
+    // Update opacity to simulate perspective
+    int opacity = 100 * (0.7f + 0.3f * cos(rad));
+    m_widget->setTransparent(100 - opacity);
+    
     m_widget->invalidate();
     
-    eDebug("[eGLSAnimation] Rotate: angle=%.2f", angle);
+    eDebug("[eGLSAnimation] Rotate: angle=%.2f, pos=(%d,%d), opacity=%d", angle, x, y, opacity);
 }
 
 void eGLSAnimation::applyBounce(float progress)
