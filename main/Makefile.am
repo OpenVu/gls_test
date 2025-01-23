@@ -45,8 +45,11 @@ enigma2_LDADD = \
 	@ALSA_LIBS@ \
 	@AVAHI_LIBS@ \
 	@LIBDL_LIBS@ \
-	@MALI_LIBS@ \
 	-ltuxtxt32bpp
+
+if HAVE_MALI
+enigma2_LDADD += $(MALI_LIBS)
+endif
 
 enigma2_LDFLAGS = -Wl,--export-dynamic
 
