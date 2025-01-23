@@ -402,6 +402,67 @@ void eGLSAnimation::applyZoom(float progress)
     }
 }
 
+void eGLSAnimation::applyRotate(float progress)
+{
+    if (!m_widget)
+        return;
+        
+    // Calculate rotation angle
+    float angle = m_params.startValue + (m_params.endValue - m_params.startValue) * progress;
+    
+    // Apply rotation transform
+    eMatrix4x4 transform;
+    transform.translate(m_params.center.x(), m_params.center.y(), 0);
+    transform.rotate(angle * M_PI / 180.0f, 0, 0, 1);  // Convert degrees to radians
+    transform.translate(-m_params.center.x(), -m_params.center.y(), 0);
+    
+    m_widget->setTransform(transform);
+    m_widget->invalidate();
+    
+    eDebug("[eGLSAnimation] Rotate: angle=%.2f", angle);
+}
+
+void eGLSAnimation::applyBounce(float progress)
+{
+    if (!m_widget)
+        return;
+        
+    ePoint current_pos = m_widget->position();
+    ePoint start_pos = m_params.startPos;
+    ePoint end_pos = m_params.endPos;
+    
+    // Calculate vertical position with bounce effect
+    float bounce_progress = bounceEaseOut(progress);
+    int x = start_pos.x() + (end_pos.x() - start_pos.x()) * progress;
+    int y = start_pos.y() + (end_pos.y() - start_pos.y()) * bounce_progress;
+    
+    m_widget->move(ePoint(x, y));
+    m_widget->invalidate();
+    
+    eDebug("[eGLSAnimation] Bounce: pos=(%d,%d), progress=%.2f", x, y, progress);
+}
+
+void eGLSAnimation::applyShake(float progress)
+{
+    if (!m_widget)
+        return;
+        
+    ePoint base_pos = m_params.startPos;
+    float amplitude = m_params.amplitude * 20.0f;  // Scale amplitude for more visible effect
+    
+    // Calculate shake offset using sine wave
+    float shake_offset = sin(progress * M_PI * m_params.bounceCount * 2) * amplitude * (1.0f - progress);
+    
+    // Apply horizontal shake
+    int x = base_pos.x() + shake_offset;
+    int y = base_pos.y();
+    
+    m_widget->move(ePoint(x, y));
+    m_widget->invalidate();
+    
+    eDebug("[eGLSAnimation] Shake: pos=(%d,%d), offset=%.2f", x, y, shake_offset);
+}
+
 #ifdef HAVE_MALI
 bool eGLSAnimation::initEGL()
 {
