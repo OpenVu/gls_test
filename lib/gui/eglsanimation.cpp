@@ -7,10 +7,11 @@ DEFINE_REF(eGLSAnimation);
 
 eGLSAnimation::eGLSAnimation(eWidget *widget)
     : m_widget(widget)
-    , m_active(false)
+    , m_timer(eTimer::create(eApp))
+    , m_params()
     , m_current_tick(0)
     , m_total_ticks(0)
-    , m_timer(eTimer::create(eApp))
+    , m_active(false)
 #ifdef HAVE_MALI
     , m_eglDisplay(EGL_NO_DISPLAY)
     , m_eglContext(EGL_NO_CONTEXT)
