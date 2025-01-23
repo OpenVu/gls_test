@@ -165,18 +165,45 @@ void eGLSAnimation::applyFade(float progress)
 {
     if (!m_widget) return;
     
-    int opacity = m_params.startValue + (m_params.endValue - m_params.startValue) * progress;
-    eDebug("[eGLSAnimation] Fade: progress=%.2f, opacity=%d", progress, opacity);
-    m_widget->setTransparent(100 - opacity);  // Convert opacity to transparency (0-100)
+    // Add smooth easing for fade
+    float easedProgress = progress < 0.5f ? 
+        2 * progress * progress :
+        1 - pow(-2 * progress + 2, 2) / 2;
+        
+    // Calculate opacity (0-255 range for widget transparency)
+    int opacity = round(m_params.startValue + (m_params.endValue - m_params.startValue) * easedProgress);
+    
+    // Clamp opacity between 0 and 100
+    opacity = std::max(0, std::min(100, opacity));
+    
+    eDebug("[eGLSAnimation] Fade: progress=%.2f, eased=%.2f, opacity=%d", 
+           progress, easedProgress, opacity);
+           
+    // Convert opacity (0-100) to transparency (0-255)
+    int transparency = (100 - opacity) * 255 / 100;
+    m_widget->setTransparent(transparency);
+    
+    // Force immediate redraw
+    m_widget->invalidate();
 }
 
 void eGLSAnimation::applySlide(float progress)
 {
     if (!m_widget) return;
     
-    int x = m_params.startPos.x() + (m_params.endPos.x() - m_params.startPos.x()) * progress;
-    int y = m_params.startPos.y() + (m_params.endPos.y() - m_params.startPos.y()) * progress;
-    eDebug("[eGLSAnimation] Slide: progress=%.2f, pos=(%d,%d)", progress, x, y);
+    // Add cubic easing for smoother slide
+    float easedProgress = progress < 0.5f ? 
+        4 * progress * progress * progress :
+        1 - pow(-2 * progress + 2, 3) / 2;
+    
+    // Use rounded integer positions to avoid sub-pixel rendering glitches
+    int x = round(m_params.startPos.x() + (m_params.endPos.x() - m_params.startPos.x()) * easedProgress);
+    int y = round(m_params.startPos.y() + (m_params.endPos.y() - m_params.startPos.y()) * easedProgress);
+    
+    eDebug("[eGLSAnimation] Slide: progress=%.2f, eased=%.2f, pos=(%d,%d)", 
+           progress, easedProgress, x, y);
+    
+    // Apply position change
     m_widget->move(ePoint(x, y));
     
     // Ensure widget is visible during slide
@@ -191,7 +218,12 @@ void eGLSAnimation::applyZoom(float progress)
 {
     if (!m_widget) return;
     
-    float scale = (m_params.startValue + (m_params.endValue - m_params.startValue) * progress) / 100.0f;
+    // Add smoother easing for zoom
+    float easedProgress = progress < 0.5f ? 
+        4 * progress * progress * progress :
+        1 - pow(-2 * progress + 2, 3) / 2;
+    
+    float scale = (m_params.startValue + (m_params.endValue - m_params.startValue) * easedProgress) / 100.0f;
     
     ePoint widgetPos = m_widget->position();
     eSize widgetSize = m_widget->size();
@@ -206,14 +238,16 @@ void eGLSAnimation::applyZoom(float progress)
         );
     }
     
-    // Calculate new position and size
-    int newWidth = widgetSize.width() * scale;
-    int newHeight = widgetSize.height() * scale;
+    // Calculate new position and size with smoother interpolation
+    int originalWidth = widgetSize.width() / (m_current_tick == 0 ? 1.0f : scale);
+    int originalHeight = widgetSize.height() / (m_current_tick == 0 ? 1.0f : scale);
+    int newWidth = originalWidth * scale;
+    int newHeight = originalHeight * scale;
     int newX = center.x() - (newWidth / 2);
     int newY = center.y() - (newHeight / 2);
     
-    eDebug("[eGLSAnimation] Zoom: progress=%.2f, scale=%.2f, size=(%d,%d), pos=(%d,%d)", 
-           progress, scale, newWidth, newHeight, newX, newY);
+    eDebug("[eGLSAnimation] Zoom: progress=%.2f, eased=%.2f, scale=%.2f, size=(%d,%d), pos=(%d,%d)", 
+           progress, easedProgress, scale, newWidth, newHeight, newX, newY);
     
     m_widget->resize(eSize(newWidth, newHeight));
     m_widget->move(ePoint(newX, newY));
