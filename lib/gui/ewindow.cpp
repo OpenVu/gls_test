@@ -71,7 +71,7 @@ void eWindow::clearFlag(int flags)
 	m_flags &= ~flags;
 }
 
-void eWindow::setAnimation(eGLSAnimation::AnimationType type, int duration)
+void eWindow::setAnimation(eGLSAnimationType type, int duration)
 {
     eDebug("[eWindow] Setting animation type=%d, duration=%d", type, duration);
     
@@ -89,12 +89,12 @@ void eWindow::setAnimation(eGLSAnimation::AnimationType type, int duration)
     
     switch (type)
     {
-        case eGLSAnimation::TYPE_FADE:
+        case TYPE_FADE:
             m_animation_params->startValue = 0;
             m_animation_params->endValue = 100;
             break;
             
-        case eGLSAnimation::TYPE_SLIDE:
+        case TYPE_SLIDE:
             {
                 ePoint pos = position();
                 m_animation_params->startPos = ePoint(pos.x() - 100, pos.y());  // Slide from left
@@ -102,20 +102,20 @@ void eWindow::setAnimation(eGLSAnimation::AnimationType type, int duration)
             }
             break;
             
-        case eGLSAnimation::TYPE_ZOOM:
+        case TYPE_ZOOM:
             m_animation_params->startValue = 50;  // Start at 50% size
             m_animation_params->endValue = 100;   // End at 100% size
             m_animation_params->center = position() + ePoint(size().width() / 2, size().height() / 2);
             break;
             
-        case eGLSAnimation::TYPE_ROTATE:
+        case TYPE_ROTATE:
             m_animation_params->startValue = 0;     // Start at 0 degrees
             m_animation_params->endValue = 360;     // Full rotation
             m_animation_params->rotationAngle = 360;
             m_animation_params->center = position() + ePoint(size().width() / 2, size().height() / 2);
             break;
             
-        case eGLSAnimation::TYPE_BOUNCE:
+        case TYPE_BOUNCE:
             {
                 ePoint pos = position();
                 m_animation_params->startPos = ePoint(pos.x(), pos.y() - 100);  // Start above
@@ -126,7 +126,7 @@ void eWindow::setAnimation(eGLSAnimation::AnimationType type, int duration)
             }
             break;
             
-        case eGLSAnimation::TYPE_SHAKE:
+        case TYPE_SHAKE:
             {
                 ePoint pos = position();
                 m_animation_params->startPos = pos;
