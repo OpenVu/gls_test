@@ -66,7 +66,7 @@ struct eGLSAnimationParams
     }
 };
 
-class eGLSAnimation: public Object
+class eGLSAnimation: public iObject
 {
     DECLARE_REF(eGLSAnimation);
     
