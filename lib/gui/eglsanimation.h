@@ -6,8 +6,6 @@
 #include <lib/gdi/gpixmap.h>
 #include <lib/gui/ewidget.h>
 
-class eGLSAnimation;  // Forward declaration for Object
-
 enum eGLSAnimationType
 {
     TYPE_FADE,
