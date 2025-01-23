@@ -8,6 +8,14 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+// Small value for floating point comparisons
+#define EPSILON 1e-6f
+
+// Helper function for float comparison
+inline bool isNearlyEqual(float a, float b) {
+    return std::abs(a - b) < EPSILON;
+}
+
 DEFINE_REF(eGLSAnimation);
 
 float eGLSAnimation::applyEasing(float t)
@@ -99,33 +107,30 @@ float eGLSAnimation::elasticEaseIn(float t)
 {
     const float c4 = (2 * M_PI) / 3;
     
-    return t == 0
-        ? 0
-        : t == 1
-        ? 1
-        : -pow(2, 10 * t - 10) * sin((t * 10 - 10.75f) * c4);
+    if (isNearlyEqual(t, 0.0f)) return 0;
+    if (isNearlyEqual(t, 1.0f)) return 1;
+    
+    return -pow(2, 10 * t - 10) * sin((t * 10 - 10.75f) * c4);
 }
 
 float eGLSAnimation::elasticEaseOut(float t) 
 {
     const float c4 = (2 * M_PI) / 3;
     
-    return t == 0
-        ? 0
-        : t == 1
-        ? 1
-        : pow(2, -10 * t) * sin((t * 10 - 0.75f) * c4) + 1;
+    if (isNearlyEqual(t, 0.0f)) return 0;
+    if (isNearlyEqual(t, 1.0f)) return 1;
+    
+    return pow(2, -10 * t) * sin((t * 10 - 0.75f) * c4) + 1;
 }
 
 float eGLSAnimation::elasticEaseInOut(float t) 
 {
     const float c5 = (2 * M_PI) / 4.5f;
     
-    return t == 0
-        ? 0
-        : t == 1
-        ? 1
-        : t < 0.5f
+    if (isNearlyEqual(t, 0.0f)) return 0;
+    if (isNearlyEqual(t, 1.0f)) return 1;
+    
+    return t < 0.5f
         ? -(pow(2, 20 * t - 10) * sin((20 * t - 11.125f) * c5)) / 2
         : (pow(2, -20 * t + 10) * sin((20 * t - 11.125f) * c5)) / 2 + 1;
 }
@@ -236,6 +241,15 @@ void eGLSAnimation::timerTick()
             break;
         case TYPE_ZOOM:
             applyZoom(progress);
+            break;
+        case TYPE_ROTATE:
+            applyRotate(progress);
+            break;
+        case TYPE_BOUNCE:
+            applyBounce(progress);
+            break;
+        case TYPE_SHAKE:
+            applyShake(progress);
             break;
     }
     
