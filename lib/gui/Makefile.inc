@@ -23,6 +23,11 @@ gui_libenigma_gui_a_SOURCES = \
 	gui/ewindowstyle.cpp \
 	gui/ewindowstyleskinned.cpp
 
+if HAVE_MALI
+gui_libenigma_gui_a_CPPFLAGS = -DHAVE_MALI $(AM_CPPFLAGS)
+gui_libenigma_gui_a_LIBADD = $(MALI_LIBS)
+endif
+
 guiincludedir = $(pkgincludedir)/lib/gui
 guiinclude_HEADERS = \
 	gui/ebutton.h \
