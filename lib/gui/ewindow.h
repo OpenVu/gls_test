@@ -2,11 +2,7 @@
 #define __lib_gui_ewindow_h
 
 #include <lib/gui/ewidget.h>
-
-// Forward declarations
-class eGLSAnimation;
-struct eGLSAnimationParams;
-enum eGLSAnimationType;
+#include <lib/gui/eglsanimation.h>
 
 class eWindow: public eWidget
 {
