@@ -82,6 +82,8 @@ public:
     void pause();
     void resume();
 
+    // Getter for widget
+    eWidget *getWidget() const { return m_widget; }
     PSignal0<void> animationFinished;
 
     bool isRunning() const { return m_active; }
