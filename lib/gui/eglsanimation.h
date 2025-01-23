@@ -54,6 +54,7 @@ private:
 
 #ifdef HAVE_MALI
     EGLDisplay m_eglDisplay;
+    EGLConfig m_eglConfig;
     EGLContext m_eglContext;
     EGLSurface m_eglSurface;
     GLuint m_program;
