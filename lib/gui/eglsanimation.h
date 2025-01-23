@@ -21,7 +21,10 @@ typedef unsigned int GLuint;
 enum eGLSAnimationType {
     TYPE_FADE = 0,
     TYPE_SLIDE = 1,
-    TYPE_ZOOM = 2
+    TYPE_ZOOM = 2,
+    TYPE_ROTATE = 3,
+    TYPE_BOUNCE = 4,
+    TYPE_SHAKE = 5
 };
 
 enum eGLSEasingType {
@@ -34,7 +37,16 @@ enum eGLSEasingType {
     EASING_QUAD_IN_OUT = 6,
     EASING_CUBIC_IN = 7,
     EASING_CUBIC_OUT = 8,
-    EASING_CUBIC_IN_OUT = 9
+    EASING_CUBIC_IN_OUT = 9,
+    EASING_BOUNCE_IN = 10,
+    EASING_BOUNCE_OUT = 11,
+    EASING_BOUNCE_IN_OUT = 12,
+    EASING_ELASTIC_IN = 13,
+    EASING_ELASTIC_OUT = 14,
+    EASING_ELASTIC_IN_OUT = 15,
+    EASING_BACK_IN = 16,
+    EASING_BACK_OUT = 17,
+    EASING_BACK_IN_OUT = 18
 };
 
 struct eGLSAnimationParams {
@@ -46,13 +58,19 @@ struct eGLSAnimationParams {
     ePoint startPos;
     ePoint endPos;
     ePoint center;
+    float rotationAngle;
+    int bounceCount;
+    float amplitude;
 
     eGLSAnimationParams() : 
         type(TYPE_FADE),
         easing(EASING_SINE_IN_OUT),
         startValue(0),
         endValue(100),
-        duration(1000)
+        duration(1000),
+        rotationAngle(0),
+        bounceCount(3),
+        amplitude(1.0f)
     {}
 };
 
@@ -80,7 +98,20 @@ private:
     void applyFade(float progress);
     void applySlide(float progress);
     void applyZoom(float progress);
+    void applyRotate(float progress);
+    void applyBounce(float progress);
+    void applyShake(float progress);
+    
     float applyEasing(float progress);
+    float bounceEaseIn(float t);
+    float bounceEaseOut(float t);
+    float bounceEaseInOut(float t);
+    float elasticEaseIn(float t);
+    float elasticEaseOut(float t);
+    float elasticEaseInOut(float t);
+    float backEaseIn(float t);
+    float backEaseOut(float t);
+    float backEaseInOut(float t);
 
 #ifdef HAVE_MALI
     bool initEGL();
