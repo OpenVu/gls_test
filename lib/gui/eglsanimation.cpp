@@ -2,106 +2,129 @@
 #include <lib/base/init.h>
 #include <lib/base/init_num.h>
 #include <lib/gdi/grc.h>
-#include <cmath>
-
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
-
-// Small value for floating point comparisons
-#define EPSILON 1e-6f
-
-// Helper function for float comparison
-inline bool isNearlyEqual(float a, float b) {
-    return std::abs(a - b) < EPSILON;
-}
 
 DEFINE_REF(eGLSAnimation);
 
 eGLSAnimation::eGLSAnimation(eWidget *widget)
     : m_widget(widget)
-    , m_timer(eTimer::create(eApp))
+    , m_active(false)
     , m_current_tick(0)
     , m_total_ticks(0)
-    , m_active(false)
-    , m_next_animation(0)
+    , m_timer(eTimer::create(eApp))
+#ifdef HAVE_MALI
+    , m_eglDisplay(EGL_NO_DISPLAY)
+    , m_eglContext(EGL_NO_CONTEXT)
+    , m_eglSurface(EGL_NO_SURFACE)
+    , m_program(0)
+    , m_texture(0)
+#endif
 {
-    CONNECT(m_timer->timeout, eGLSAnimation::timerTick);
+    eDebug("[eGLSAnimation] Constructor: widget=%p", widget);
+    if (!m_timer) {
+        eDebug("[eGLSAnimation] Failed to create timer!");
+        return;
+    }
+    
+    m_timer->timeout.connect(sigc::mem_fun(*this, &eGLSAnimation::timerTick));
+    eDebug("[eGLSAnimation] Timer connected");
+    
+#ifdef HAVE_MALI
+    initEGL();
+#endif
 }
 
 eGLSAnimation::~eGLSAnimation()
 {
+#ifdef HAVE_MALI
+    cleanupEGL();
+#endif
     stop();
-    m_timer = 0;  // Smart pointer will handle cleanup
-}
-
-void eGLSAnimation::start(const eGLSAnimationParams &params)
-{
-    if (!m_widget)
-    {
-        eDebug("[eGLSAnimation] No widget set!");
-        return;
-    }
-    
-    stop();
-    
-    m_params = params;
-    m_current_tick = 0;
-    m_total_ticks = std::max(1, m_params.duration / 16);  // 16ms per frame (60fps)
-    m_active = true;
-    
-    eDebug("[eGLSAnimation] Starting animation type=%d, duration=%d, startValue=%d, endValue=%d",
-           (int)params.type, params.duration, params.startValue, params.endValue);
-    
-    // Store initial position for position-based animations
-    if (m_params.type == TYPE_SLIDE || m_params.type == TYPE_BOUNCE || m_params.type == TYPE_SHAKE)
-    {
-        m_params.startPos = m_widget->position();
-    }
-    
-    // Store center point for rotate/zoom animations
-    if (m_params.type == TYPE_ROTATE || m_params.type == TYPE_ZOOM)
-    {
-        eSize size = m_widget->size();
-        m_params.center = m_widget->position() + ePoint(size.width() / 2, size.height() / 2);
-    }
-    
-    m_timer->start(16, true);  // 16ms interval for smooth animation
-}
-
-void eGLSAnimation::stop()
-{
-    if (m_timer)
-        m_timer->stop();
-    m_active = false;
-}
-
-void eGLSAnimation::chain(eGLSAnimation *next)
-{
-    m_next_animation = next;
-}
-
-void eGLSAnimation::onAnimationFinished()
-{
-    if (m_next_animation)
-    {
-        m_next_animation->start(m_next_animation->m_params);
-    }
-    
-    /*emit*/ animationFinished();
 }
 
 void eGLSAnimation::timerTick()
 {
+    eDebug("[eGLSAnimation] Timer tick");
+    tick();
+}
+
+void eGLSAnimation::start(const eGLSAnimationParams &params)
+{
+    eDebug("[eGLSAnimation] Starting animation type=%d, duration=%d, startValue=%d, endValue=%d",
+           params.type, params.duration, params.startValue, params.endValue);
+           
+    if (!m_timer) {
+        eDebug("[eGLSAnimation] No timer available!");
+        return;
+    }
+    
+    if (!m_widget) {
+        eDebug("[eGLSAnimation] No widget available!");
+        return;
+    }
+           
+    if (m_active) {
+        eDebug("[eGLSAnimation] Stopping previous animation");
+        stop();
+    }
+
+    m_params = params;
+    m_current_tick = 0;
+    m_total_ticks = params.duration / 16;  // 60fps
+    m_active = true;
+    
+    // Start timer for animation updates
+    eDebug("[eGLSAnimation] Starting timer with interval=16ms, total_ticks=%d", m_total_ticks);
+    m_timer->startLongTimer(0);  // Start immediately
+    eDebug("[eGLSAnimation] Timer started");
+}
+
+void eGLSAnimation::stop()
+{
+    if (m_active)
+    {
+        eDebug("[eGLSAnimation] Stopping animation");
+        if (m_timer) {
+            m_timer->stop();
+            eDebug("[eGLSAnimation] Timer stopped");
+        }
+        m_active = false;
+        m_current_tick = 0;
+    }
+}
+
+void eGLSAnimation::pause()
+{
+    if (m_active)
+    {
+        eDebug("[eGLSAnimation] Pausing animation");
+        m_timer->stop();
+        m_active = false;
+    }
+}
+
+void eGLSAnimation::resume()
+{
+    if (!m_active && m_current_tick < m_total_ticks)
+    {
+        eDebug("[eGLSAnimation] Resuming animation");
+        m_timer->startLongTimer(0);
+        m_active = true;
+    }
+}
+
+void eGLSAnimation::tick()
+{
     if (!m_active || !m_widget)
     {
         eDebug("[eGLSAnimation] Tick skipped: active=%d, widget=%p", m_active, m_widget);
-        stop();
         return;
     }
 
     m_current_tick++;
     float progress = (float)m_current_tick / m_total_ticks;
+    
+    // Apply easing (simple ease-in-out)
+    progress = progress < 0.5f ? 2.0f * progress * progress : -1.0f + (4.0f - 2.0f * progress) * progress;
     
     eDebug("[eGLSAnimation] Tick: %d/%d, progress=%.2f", m_current_tick, m_total_ticks, progress);
     
@@ -116,34 +139,22 @@ void eGLSAnimation::timerTick()
         case TYPE_ZOOM:
             applyZoom(progress);
             break;
-        case TYPE_ROTATE:
-            applyRotate(progress);
-            break;
-        case TYPE_BOUNCE:
-            applyBounce(progress);
-            break;
-        case TYPE_SHAKE:
-            applyShake(progress);
-            break;
     }
     
     if (m_current_tick >= m_total_ticks)
     {
         eDebug("[eGLSAnimation] Animation finished");
         stop();
-        onAnimationFinished();
+        animationFinished();
+        return;
     }
-    else
-    {
-        // Schedule next tick only if we haven't finished
-        m_timer->start(16);
-    }
+    
+    // Schedule next tick
+    m_timer->startLongTimer(0);
 }
 
 void eGLSAnimation::applyFade(float progress)
 {
-    if (!m_widget) return;
-    
     int opacity = m_params.startValue + (m_params.endValue - m_params.startValue) * progress;
     eDebug("[eGLSAnimation] Fade: progress=%.2f, opacity=%d", progress, opacity);
     m_widget->setTransparent(100 - opacity);  // Convert opacity to transparency (0-100)
@@ -151,8 +162,6 @@ void eGLSAnimation::applyFade(float progress)
 
 void eGLSAnimation::applySlide(float progress)
 {
-    if (!m_widget) return;
-    
     int x = m_params.startPos.x() + (m_params.endPos.x() - m_params.startPos.x()) * progress;
     int y = m_params.startPos.y() + (m_params.endPos.y() - m_params.startPos.y()) * progress;
     eDebug("[eGLSAnimation] Slide: progress=%.2f, pos=(%d,%d)", progress, x, y);
@@ -168,8 +177,6 @@ void eGLSAnimation::applySlide(float progress)
 
 void eGLSAnimation::applyZoom(float progress)
 {
-    if (!m_widget) return;
-    
     float scale = (m_params.startValue + (m_params.endValue - m_params.startValue) * progress) / 100.0f;
     
     ePoint widgetPos = m_widget->position();
@@ -205,76 +212,110 @@ void eGLSAnimation::applyZoom(float progress)
     }
 }
 
-void eGLSAnimation::applyRotate(float progress)
+#ifdef HAVE_MALI
+bool eGLSAnimation::initEGL()
 {
-    if (!m_widget)
-        return;
-        
-    // Calculate rotation angle
-    float angle = m_params.startValue + (m_params.endValue - m_params.startValue) * progress;
-    
-    // Since we don't have matrix transforms, we'll simulate rotation by adjusting size and position
-    ePoint center = m_params.center;
-    eSize size = m_widget->size();
-    int radius = std::min(size.width(), size.height()) / 2;
-    
-    // Calculate new position based on rotation
-    float rad = angle * M_PI / 180.0f;
-    int x = center.x() + radius * cos(rad) - size.width() / 2;
-    int y = center.y() + radius * sin(rad) - size.height() / 2;
-    
-    // Update position
-    m_widget->move(ePoint(x, y));
-    
-    // Update opacity to simulate perspective
-    int opacity = 100 * (0.7f + 0.3f * cos(rad));
-    m_widget->setTransparent(100 - opacity);
-    
-    m_widget->invalidate();
-    
-    eDebug("[eGLSAnimation] Rotate: angle=%.2f, pos=(%d,%d), opacity=%d", angle, x, y, opacity);
+    m_eglDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    if (m_eglDisplay == EGL_NO_DISPLAY)
+        return false;
+
+    EGLint major, minor;
+    if (!eglInitialize(m_eglDisplay, &major, &minor))
+        return false;
+
+    const EGLint configAttribs[] = {
+        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+        EGL_RED_SIZE, 8,
+        EGL_GREEN_SIZE, 8,
+        EGL_BLUE_SIZE, 8,
+        EGL_ALPHA_SIZE, 8,
+        EGL_NONE
+    };
+
+    EGLint numConfigs;
+    if (!eglChooseConfig(m_eglDisplay, configAttribs, &m_eglConfig, 1, &numConfigs))
+        return false;
+
+    const EGLint contextAttribs[] = {
+        EGL_CONTEXT_CLIENT_VERSION, 2,
+        EGL_NONE
+    };
+
+    m_eglContext = eglCreateContext(m_eglDisplay, m_eglConfig, EGL_NO_CONTEXT, contextAttribs);
+    if (m_eglContext == EGL_NO_CONTEXT)
+        return false;
+
+    return createShaders();
 }
 
-void eGLSAnimation::applyBounce(float progress)
+void eGLSAnimation::cleanupEGL()
 {
-    if (!m_widget) return;
-    
-    // Get start and end positions
-    ePoint start_pos = m_params.startPos;
-    ePoint end_pos = m_params.endPos;
-    
-    // Calculate bounce effect
-    float bounce_height = m_params.amplitude * 100; // Maximum bounce height in pixels
-    float bounce_phase = progress * M_PI * m_params.bounceCount; // Multiple bounces
-    float vertical_offset = bounce_height * (1 - progress) * std::abs(std::sin(bounce_phase));
-    
-    // Calculate horizontal position with linear interpolation
-    int x = start_pos.x() + (end_pos.x() - start_pos.x()) * progress;
-    
-    // Calculate vertical position with bounce
-    int y = start_pos.y() + (end_pos.y() - start_pos.y()) * progress - vertical_offset;
-    
-    m_widget->move(ePoint(x, y));
-    eDebug("[eGLSAnimation] Bounce: pos=(%d,%d), offset=%.2f", x, y, vertical_offset);
+    if (m_eglDisplay != EGL_NO_DISPLAY)
+    {
+        if (m_eglContext != EGL_NO_CONTEXT)
+        {
+            eglDestroyContext(m_eglDisplay, m_eglContext);
+            m_eglContext = EGL_NO_CONTEXT;
+        }
+        if (m_eglSurface != EGL_NO_SURFACE)
+        {
+            eglDestroySurface(m_eglDisplay, m_eglSurface);
+            m_eglSurface = EGL_NO_SURFACE;
+        }
+        eglTerminate(m_eglDisplay);
+        m_eglDisplay = EGL_NO_DISPLAY;
+    }
+
+    if (m_program)
+    {
+        glDeleteProgram(m_program);
+        m_program = 0;
+    }
+    if (m_texture)
+    {
+        glDeleteTextures(1, &m_texture);
+        m_texture = 0;
+    }
 }
 
-void eGLSAnimation::applyShake(float progress)
+bool eGLSAnimation::createShaders()
 {
-    if (!m_widget)
-        return;
-        
-    ePoint base_pos = m_params.startPos;
-    float amplitude = m_params.amplitude * 20.0f;  // Scale amplitude for more visible effect
-    
-    // Calculate shake offset using sine wave
-    float shake_offset = sin(progress * M_PI * m_params.bounceCount * 2) * amplitude * (1.0f - progress);
-    
-    // Apply horizontal shake
-    int x = base_pos.x() + shake_offset;
-    int y = base_pos.y();
-    
-    m_widget->move(ePoint(x, y));
-    m_widget->invalidate();
-    
-    eDebug("[eGLSAnimation] Shake: pos=(%d,%d), offset=%.2f", x, y, shake_offset);
+    const char *vertexShader =
+        "attribute vec4 position;\n"
+        "attribute vec2 texcoord;\n"
+        "varying vec2 v_texcoord;\n"
+        "void main() {\n"
+        "    gl_Position = position;\n"
+        "    v_texcoord = texcoord;\n"
+        "}\n";
+
+    const char *fragmentShader =
+        "precision mediump float;\n"
+        "varying vec2 v_texcoord;\n"
+        "uniform sampler2D texture;\n"
+        "uniform float alpha;\n"
+        "void main() {\n"
+        "    vec4 color = texture2D(texture, v_texcoord);\n"
+        "    gl_FragColor = vec4(color.rgb, color.a * alpha);\n"
+        "}\n";
+
+    GLuint vs = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vs, 1, &vertexShader, NULL);
+    glCompileShader(vs);
+
+    GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fs, 1, &fragmentShader, NULL);
+    glCompileShader(fs);
+
+    m_program = glCreateProgram();
+    glAttachShader(m_program, vs);
+    glAttachShader(m_program, fs);
+    glLinkProgram(m_program);
+
+    glDeleteShader(vs);
+    glDeleteShader(fs);
+
+    return true;
 }
+#endif
