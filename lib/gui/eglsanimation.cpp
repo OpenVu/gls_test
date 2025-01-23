@@ -163,7 +163,7 @@ float eGLSAnimation::backEaseInOut(float t)
 
 eGLSAnimation::eGLSAnimation(eWidget *widget)
     : m_widget(widget)
-    , m_timer(new eTimer)
+    , m_timer(eTimer::create(eApp))
     , m_current_tick(0)
     , m_total_ticks(0)
     , m_active(false)
@@ -551,7 +551,7 @@ bool eGLSAnimation::createShaders()
 eGLSAnimation::~eGLSAnimation()
 {
     stop();
-    delete m_timer;
+    m_timer = 0;  // Smart pointer will handle cleanup
 #ifdef HAVE_MALI
     cleanupEGL();
 #endif
