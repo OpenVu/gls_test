@@ -48,7 +48,7 @@ enigma2_LDADD = \
 	-ltuxtxt32bpp
 
 if HAVE_MALI
-enigma2_LDADD += $(MALI_LIBS)
+enigma2_LDADD += -lMali
 endif
 
 enigma2_LDFLAGS = -Wl,--export-dynamic
