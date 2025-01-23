@@ -38,18 +38,29 @@ PKG_CHECK_MODULES(AVAHI, avahi-client)
 
 # Check for MALI/GLES support
 AC_ARG_ENABLE([mali],
-    AS_HELP_STRING([--enable-mali], [Enable MALI GPU support]))
+    AS_HELP_STRING([--enable-mali], [Enable MALI/HiSilicon GPU support]))
 
 AS_IF([test "x$enable_mali" = "xyes"], [
+    # Check for HiSilicon GPU headers and libraries
     AC_CHECK_HEADERS([EGL/egl.h GLES2/gl2.h], [
         AC_CHECK_LIB([EGL], [eglGetDisplay], [
             AC_CHECK_LIB([GLESv2], [glCreateShader], [
-                AC_DEFINE([HAVE_MALI], [1], [Define if Mali EGL/GLES is available])
+                AC_DEFINE([HAVE_MALI], [1], [Define if MALI/HiSilicon EGL/GLES is available])
                 MALI_LIBS="-lEGL -lGLESv2"
                 have_mali="yes"
-            ], [have_mali="no"])
-        ], [have_mali="no"])
-    ], [have_mali="no"])
+                AC_MSG_NOTICE([Found HiSilicon GPU EGL/GLES2 support])
+            ], [
+                have_mali="no"
+                AC_MSG_WARN([GLESv2 library not found. Install qviart-opengl-hisi3798mv200-dev package])
+            ])
+        ], [
+            have_mali="no"
+            AC_MSG_WARN([EGL library not found. Install qviart-opengl-hisi3798mv200-dev package])
+        ])
+    ], [
+        have_mali="no"
+        AC_MSG_WARN([EGL/GLES headers not found. Install qviart-opengl-hisi3798mv200-dev package])
+    ])
 ])
 
 AM_CONDITIONAL([HAVE_MALI], [test "x$have_mali" = "xyes"])
