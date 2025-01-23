@@ -36,6 +36,24 @@ PKG_CHECK_MODULES(LIBDDVD, libdreamdvd, HAVE_LIBDDVD="yes", HAVE_LIBDDVD="no")
 AM_CONDITIONAL(HAVE_LIBDDVD, test "$HAVE_LIBDDVD" = "yes")
 PKG_CHECK_MODULES(AVAHI, avahi-client)
 
+# Check for MALI/GLES support
+AC_ARG_ENABLE([mali],
+    AS_HELP_STRING([--enable-mali], [Enable MALI GPU support]))
+
+AS_IF([test "x$enable_mali" = "xyes"], [
+    # Check for required MALI libraries
+    AC_CHECK_LIB([EGL], [eglGetDisplay], [
+        AC_CHECK_LIB([GLESv2], [glCreateShader], [
+            AC_DEFINE([HAVE_MALI], [1], [Define if Mali EGL/GLES is available])
+            MALI_LIBS="-lEGL -lGLESv2"
+            have_mali="yes"
+        ], [have_mali="no"])
+    ], [have_mali="no"])
+])
+
+AM_CONDITIONAL([HAVE_MALI], [test "x$have_mali" = "xyes"])
+AC_SUBST(MALI_LIBS)
+
 AC_CHECK_LIB([udfread], [udfread_init])
 AC_CHECK_LIB([dl], [dlopen], [LIBDL_LIBS="-ldl"], [AC_MSG_ERROR([Could not find libdl])])
 AC_SUBST(LIBDL_LIBS)
