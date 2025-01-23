@@ -73,5 +73,5 @@ public:
     bool isActive() const;
     const eGLSAnimationParams &getParams() const;
 
-    Signal0<void> animationFinished;
+    PSignal0<void> animationFinished;
 };
