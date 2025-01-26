@@ -563,6 +563,37 @@ class AttributeParser:
 		radius, edgeValue = parseRadius(value)
 		self.guiObject.setItemCornerRadiusSelected(radius, edgeValue)
 
+	def gridMode(self, value):
+		try:
+			mode = {
+				"grid": True,
+				"list": False
+			}[value]
+			self.guiObject.setGridMode(mode, 3)  # Default to 3 columns for grid mode
+		except KeyError:
+			print("[Skin] Error: Invalid gridMode '%s'! Must be one of 'grid' or 'list'." % value)
+
+	def flex(self, value):
+		try:
+			if value == "grid":
+				self.guiObject.setGridMode(True, 3)  # Default to 3 columns
+			elif value == "list":
+				self.guiObject.setGridMode(False, 1)
+			else:
+				raise KeyError
+		except KeyError:
+			print("[Skin] Error: Invalid flex value '%s'! Must be one of 'grid' or 'list'." % value)
+		except Exception as e:
+			print("[Skin] Error: Failed to set flex mode:", str(e))
+
+	def margin(self, value):
+		try:
+			margin = int(value)
+			if hasattr(self.guiObject, 'setItemSpacing'):
+				self.guiObject.setItemSpacing(margin)
+		except ValueError:
+			print("[Skin] Error: Invalid margin value '%s'! Must be an integer." % value)
+
 	def pixmap(self, value):
 		if value.endswith(".svg"): # if graphic is svg force alphatest to "blend"
 			self.guiObject.setAlphatest(BT_ALPHABLEND)
