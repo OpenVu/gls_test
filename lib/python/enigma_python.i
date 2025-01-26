@@ -477,3 +477,20 @@ extern void resumeInit(void);
 
 %include <lib/python/python_console.i>
 %include <lib/python/python_base.i>
+
+%include <lib/gui/elistbox.h>
+%include <lib/gui/elistboxcontent.h>
+%include <lib/gui/esubtitle.h>
+
+// Add grid mode methods to eListbox
+%extend eListbox {
+    void setGridMode(bool enabled, int columns = 3) {
+        self->setGridMode(enabled, columns);
+    }
+    
+    void setItemSpacing(int spacing) {
+        self->setItemSpacing(spacing);
+    }
+}
+
+%include <lib/service/listboxservice.h>
