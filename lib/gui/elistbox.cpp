@@ -10,7 +10,8 @@ eListbox::eListbox(eWidget *parent) :
 	eWidget(parent), m_scrollbar_mode(showNever), m_prev_scrollbar_page(-1),
 	m_content_changed(false), m_enabled_wrap_around(false), m_scrollbar_width(10), m_scrollbar_height(10),
 	m_top(0), m_left(0), m_selected(0), m_itemheight(25), m_itemwidth(25), m_orientation(orVertical),
-	m_items_per_page(0), m_selection_enabled(1), m_native_keys_bound(false), m_scrollbar(nullptr)
+	m_items_per_page(0), m_selection_enabled(1), m_native_keys_bound(false), m_scrollbar(nullptr),
+	m_grid_mode(false), m_columns(1), m_item_spacing(10)
 {
 	memset(static_cast<void*>(&m_style), 0, sizeof(m_style));
 	m_style.m_text_offset = ePoint(1,1);
@@ -555,40 +556,48 @@ int eListbox::event(int event, void *data, void *data2)
 				yoffset = m_scrollbar->size().height() + 5;
 			}
 			
-			if (m_orientation == orVertical)
+			if (m_grid_mode)
 			{
-				for (int y = 0, i = 0; i <= m_items_per_page; y += m_itemheight, ++i)
+				for (int i = 0; i < m_items_per_page; ++i)
 				{
-					gRegion entry_clip_rect = paint_region & entryrect;
-
-					if (!entry_clip_rect.empty())
-						m_content->paint(painter, *style, ePoint(xoffset, y), m_selected == m_content->cursorGet() && m_content->size() && m_selection_enabled);
-
-						/* (we could clip with entry_clip_rect, but
-						this shouldn't change the behavior of any
-						well behaving content, so it would just
-						degrade performance without any gain.) */
-
-					m_content->cursorMove(+1);
-					entryrect.moveBy(ePoint(0, m_itemheight));
+					int item_index = m_top + i;
+					if (item_index >= m_content->size())
+						break;
+						
+					int row = i / m_columns;
+					int col = i % m_columns;
+					
+					int xpos = offset.x() + col * (m_itemwidth + m_item_spacing); // 10 pixels spacing
+					int ypos = offset.y() + row * (m_itemheight + m_item_spacing);
+					
+					ePoint item_offset(xpos, ypos);
+					gRegion item_clip(eRect(item_offset, m_content->getSize()));
+					
+					painter.clip(item_clip);
+					m_content->paint(painter, *style, item_offset, item_index == m_selected);
+					painter.clippop();
 				}
 			}
 			else
 			{
-				for (int x = 0, i = 0; i <= m_items_per_page; x += m_itemwidth, ++i)
+				int items_shown = (m_orientation == orVertical) ? 
+					((size().height() + m_itemheight - 1) / m_itemheight) :
+					((size().width() + m_itemwidth - 1) / m_itemwidth);
+					
+				for (int i = 0; i < items_shown; ++i)
 				{
-					gRegion entry_clip_rect = paint_region & entryrect;
-
-					if (!entry_clip_rect.empty())
-						m_content->paint(painter, *style, ePoint(x, yoffset), m_selected == m_content->cursorGet() && m_content->size() && m_selection_enabled);
-
-						/* (we could clip with entry_clip_rect, but
-						this shouldn't change the behavior of any
-						well behaving content, so it would just
-						degrade performance without any gain.) */
-
-					m_content->cursorMove(+1);
-					entryrect.moveBy(ePoint(m_itemwidth, 0));
+					int item_index = (m_orientation == orVertical) ? m_top + i : m_left + i;
+					if (item_index >= m_content->size())
+						break;
+						
+					ePoint item_offset = (m_orientation == orVertical) ?
+						ePoint(offset.x(), offset.y() + i * m_itemheight) :
+						ePoint(offset.x() + i * m_itemwidth, offset.y());
+						
+					gRegion item_clip(eRect(item_offset, m_content->getSize()));
+					painter.clip(item_clip);
+					m_content->paint(painter, *style, item_offset, item_index == m_selected);
+					painter.clippop();
 				}
 			}
 
@@ -663,9 +672,26 @@ int eListbox::event(int event, void *data, void *data2)
 
 void eListbox::recalcSize()
 {
-	m_content_changed=true;
-	m_prev_scrollbar_page=-1;
-	if (m_orientation == orVertical)
+	m_content_changed = true;
+	m_prev_scrollbar_page = -1;
+	
+	if (m_grid_mode) {
+		if (m_content) {
+			int available_width = size().width();
+			if (m_scrollbar && m_scrollbar_mode == showLeft)
+				available_width -= m_scrollbar_width;
+			else if (m_scrollbar && m_scrollbar_mode == showRight)
+				available_width -= m_scrollbar_width;
+				
+			m_itemwidth = (available_width - (m_columns - 1) * m_item_spacing) / m_columns;
+			m_content->setSize(eSize(m_itemwidth, m_itemheight));
+		}
+		
+		int items_per_row = m_columns;
+		int rows = (size().height() + m_itemheight - 1) / m_itemheight;
+		m_items_per_page = items_per_row * rows;
+	}
+	else if (m_orientation == orVertical)
 	{
 		if (m_content)
 			m_content->setSize(eSize(size().width(), m_itemheight));
@@ -678,10 +704,17 @@ void eListbox::recalcSize()
 		m_items_per_page = size().width() / m_itemwidth;
 	}
 
-	if (m_items_per_page < 0) /* TODO: whyever - our size could be invalid, or itemheigh could be wrongly specified. */
- 		m_items_per_page = 0;
+	if (m_items_per_page < 0)
+		m_items_per_page = 0;
 
 	moveSelection(justCheck);
+}
+
+void eListbox::setGridMode(bool enabled, int columns)
+{
+	m_grid_mode = enabled;
+	m_columns = columns > 0 ? columns : 1;
+	recalcSize();
 }
 
 void eListbox::setItemHeight(int h)
