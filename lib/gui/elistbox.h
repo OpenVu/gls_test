@@ -190,6 +190,8 @@ public:
 
 	void setItemCornerRadius(int radius, int edges);
 	void setItemCornerRadiusSelected(int radius, int edges);
+	void setGridMode(bool enabled, int columns = 3);  // Added grid mode setter
+	void setItemSpacing(int spacing);  // Added item spacing setter
 
 	static void setDefaultItemRadius(int radius, int radiusEdges)
 	{
@@ -233,6 +235,9 @@ private:
 	int m_orientation;
 	int m_items_per_page;
 	int m_selection_enabled;
+	bool m_grid_mode;  // Added grid mode flag
+	int m_columns;     // Added number of columns for grid mode
+	int m_item_spacing;  // Added item spacing
 	void setItemCornerRadiusInternal(int radius, int edges, int index);
 
 	bool m_native_keys_bound;
