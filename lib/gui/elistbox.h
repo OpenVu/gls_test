@@ -118,6 +118,13 @@ public:
 		showLeft,
 		showTop
 	};
+
+	enum FlexMode {
+		flexVertical,
+		flexGrid,
+		flexHorizontal
+	};
+
 	void setScrollbarMode(int mode);
 	void setWrapAround(bool);
 	enum { orHorizontal, orVertical };
@@ -184,25 +191,34 @@ public:
 	void setSliderBorderWidth(int size);
 	void setSliderForegroundColor(gRGB &col);
 
+	void setFlexMode(FlexMode mode);
+	void setScrollMode(int scroll);
+	void setSelectionHeight(int h);
+	void setSelectionWidth(int w);
+	void setRows(int r);
+	void setColumns(int c);
+	void setMargin(const ePoint &margin);
+
 	int getScrollbarWidth() { return m_scrollbar_width; }
 	int getScrollbarHeight() { return m_scrollbar_height; }
 	int getMaxItemTextWidth() { return m_content->getMaxItemTextWidth(); }
 
 	void setItemCornerRadius(int radius, int edges);
 	void setItemCornerRadiusSelected(int radius, int edges);
-	void setGridMode(bool enabled);
-	bool flexGrid = false;
+	//void setGridMode(bool enabled);
+	//bool flexGrid = false;
 	void setItemSpacing(int spacing);
 
 	static void setDefaultItemRadius(int radius, int radiusEdges)
 	{
-		defaultItemRadius[0] = radius;
-		defaultItemRadiusEdges[0] = radiusEdges;
+		defaultItemRadius = radius;
+		defaultRadiusEdges = radiusEdges;
 	}
+
 	static void setDefaultItemRadiusSelected(int radius, int radiusEdges)
 	{
-		defaultItemRadius[1] = radius;
-		defaultItemRadiusEdges[1] = radiusEdges;
+		defaultItemRadiusSelected = radius;
+		defaultRadiusEdgesSelected = radiusEdges;
 	}
 
 #ifndef SWIG
@@ -224,31 +240,41 @@ protected:
 	void recalcSize();
 
 private:
-	int m_scrollbar_mode, m_prev_scrollbar_page;
+	int m_scrollbar_mode;
+	int m_scroll_mode;
+	int m_prev_scrollbar_page;
 	bool m_content_changed;
 	bool m_enabled_wrap_around;
-
+	bool m_itemheight_set;
+	bool m_itemwidth_set;
+	bool m_selectionheight_set;
+	bool m_selectionwidth_set;
+	bool m_columns_set;
+	bool m_rows_set;
 	int m_scrollbar_width;
-	int m_scrollbar_height;
-	int m_top, m_left, m_selected;
+	int m_scrollbar_border_width;
+	int m_scrollbar_offset;
+	int m_top;
+	int m_selected;
+	int m_flex_mode;
 	int m_itemheight;
 	int m_itemwidth;
-	int m_orientation;
+	int m_selectionheight;
+	int m_selectionwidth;
+	int m_columns;
+	int m_rows;
 	int m_items_per_page;
 	int m_selection_enabled;
-	bool m_grid_mode;
-	int m_columns;
-	int m_item_spacing;
-	void setItemCornerRadiusInternal(int radius, int edges, int index);
-
-	bool m_native_keys_bound;
-
+	int xoffset;
+	int yoffset;
+	eRect m_selection_area;
 	ePtr<iListboxContent> m_content;
 	eSlider *m_scrollbar;
-	eListboxStyle m_style;
-	ePtr<gPixmap> m_scrollbarpixmap, m_scrollbarbackgroundpixmap;
-	static int defaultItemRadius[2];
-	static int defaultItemRadiusEdges[2];
+	uint m_prev_scrollbar_page;
+	static int defaultItemRadius;
+	static int defaultRadiusEdges;
+	static int defaultItemRadiusSelected;
+	static int defaultRadiusEdgesSelected;
 #endif
 };
 
