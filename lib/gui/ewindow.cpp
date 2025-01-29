@@ -91,7 +91,7 @@ void eWindow::setAnimation(eGLSAnimationParams::AnimationType type, int duration
         case eGLSAnimationParams::TYPE_SLIDE:
             {
                 ePoint current = position();
-                eSize screen = m_desktop->size();
+                //eSize screen = m_desktop->size();
                 
                 // Start from left edge of screen
                 params.startPos = ePoint(-size().width(), current.y());
