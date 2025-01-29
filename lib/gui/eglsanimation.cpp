@@ -224,7 +224,7 @@ void eGLSAnimation::renderBufferedFrame()
 {
     if (!m_buffer_ready || m_buffer_index >= m_frame_buffer.size())
         return;
-        
+
     const AnimationFrame& frame = m_frame_buffer[m_buffer_index];
     if (!frame.valid)
         return;
@@ -232,21 +232,79 @@ void eGLSAnimation::renderBufferedFrame()
     // Bind the framebuffer for off-screen rendering
     glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
     glClear(GL_COLOR_BUFFER_BIT);
-    
+
     // Apply frame properties
     m_widget->move(frame.position);
-    
+
     if (frame.size.width() > 0 && frame.size.height() > 0)
         m_widget->resize(frame.size);
-    
+
     // Apply opacity for fade animations
     if (m_params.type == eGLSAnimationParams::TYPE_FADE)
         m_widget->setTransparent(255 * (1.0f - frame.opacity));
 
-    // Now render the off-screen texture to the widget
+    // Unbind the framebuffer
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // Now render the off-screen texture to the widget's area
     glBindTexture(GL_TEXTURE_2D, m_colorTexture);
-    // Draw the texture to the widget's area here (you may need to implement this)
     
+    // Use the shader program
+    glUseProgram(m_program);
+
+    // Set up vertex data for a quad
+    GLfloat vertices[] = {
+        // Positions        // Texture Coords
+        -1.0f,  1.0f, 0.0f,  // Top Left
+         1.0f,  1.0f, 1.0f,  // Top Right
+         1.0f, -1.0f, 1.0f,  // Bottom Right
+        -1.0f, -1.0f, 0.0f   // Bottom Left
+    };
+
+    GLfloat texCoords[] = {
+        0.0f, 0.0f,  // Top Left
+        1.0f, 0.0f,  // Top Right
+        1.0f, 1.0f,  // Bottom Right
+        0.0f, 1.0f   // Bottom Left
+    };
+
+    // Create and bind a Vertex Array Object (VAO)
+    GLuint vao;
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+
+    // Create and bind a Vertex Buffer Object (VBO) for vertices
+    GLuint vbo;
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    // Position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)0);
+    glEnableVertexAttribArray(0);
+
+    // Create and bind a VBO for texture coordinates
+    GLuint texVbo;
+    glGenBuffers(1, &texVbo);
+    glBindBuffer(GL_ARRAY_BUFFER, texVbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(texCoords), texCoords, GL_STATIC_DRAW);
+
+    // Texture coordinate attribute
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (GLvoid*)0);
+    glEnableVertexAttribArray(1);
+
+    // Unbind the VBOs
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    // Draw the quad
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+    // Clean up
+    glBindVertexArray(0);
+    glDeleteBuffers(1, &vbo);
+    glDeleteBuffers(1, &texVbo);
+    glDeleteVertexArrays(1, &vao);
+
     m_buffer_index++;
 }
 
