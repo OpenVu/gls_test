@@ -15,6 +15,8 @@ eGLSAnimation::eGLSAnimation(eWidget *widget)
     , m_active(false)
     , m_buffer_index(0)
     , m_buffer_ready(false)
+    , m_fbo(0) // Initialize m_fbo to 0
+    , m_colorTexture(0) // Initialize m_colorTexture to 0
 #ifdef HAVE_MALI
     , m_eglDisplay(EGL_NO_DISPLAY)
     , m_eglConfig()
@@ -49,6 +51,15 @@ eGLSAnimation::eGLSAnimation(eWidget *widget)
 eGLSAnimation::~eGLSAnimation()
 {
 #ifdef HAVE_MALI
+    // Cleanup framebuffer and texture
+    if (m_fbo) {
+        glDeleteFramebuffers(1, &m_fbo);
+        m_fbo = 0;
+    }
+    if (m_colorTexture) {
+        glDeleteTextures(1, &m_colorTexture);
+        m_colorTexture = 0;
+    }
     cleanupEGL();
 #endif
     stop();
@@ -145,6 +156,25 @@ AnimationFrame eGLSAnimation::calculateFadeFrame(float progress)
     return frame;
 }
 
+void eGLSAnimation::setupDoubleBuffer()
+{
+    glGenFramebuffers(1, &m_fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
+
+    glGenTextures(1, &m_colorTexture);
+    glBindTexture(GL_TEXTURE_2D, m_colorTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_colorTexture, 0);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        eDebug("[eGLSAnimation] Framebuffer not complete!");
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
 void eGLSAnimation::prepareFrameBuffer()
 {
     // Clear existing buffer
@@ -189,6 +219,10 @@ void eGLSAnimation::renderBufferedFrame()
     const AnimationFrame& frame = m_frame_buffer[m_buffer_index];
     if (!frame.valid)
         return;
+
+    // Bind the framebuffer for off-screen rendering
+    glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
+    glClear(GL_COLOR_BUFFER_BIT);
     
     // Apply frame properties
     m_widget->move(frame.position);
@@ -199,6 +233,10 @@ void eGLSAnimation::renderBufferedFrame()
     // Apply opacity for fade animations
     if (m_params.type == eGLSAnimationParams::TYPE_FADE)
         m_widget->setTransparent(255 * (1.0f - frame.opacity));
+
+    // Now render the off-screen texture to the widget
+    glBindTexture(GL_TEXTURE_2D, m_colorTexture);
+    // Draw the texture to the widget's area here (you may need to implement this)
     
     m_buffer_index++;
 }
