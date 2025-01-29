@@ -5,7 +5,6 @@
 #include <lib/base/ebase.h>
 #include <lib/base/object.h>
 #include <lib/gdi/gpixmap.h>
-#include <lib/base/sigc.h>
 #include <vector>
 
 #ifdef HAVE_MALI
