@@ -93,10 +93,11 @@ private:
     // Double buffering members
     GLuint m_fbo; // Framebuffer object
     GLuint m_colorTexture; // Texture for the color buffer
-    
+
     // Buffer management methods
     void prepareFrameBuffer();
     void renderBufferedFrame();
+    void setupDoubleBuffer();
     float calculateEasing(float progress);
     
     // Frame calculation methods
