@@ -5,6 +5,8 @@
 #include <lib/base/ebase.h>
 #include <lib/base/object.h>
 #include <lib/gdi/gpixmap.h>
+#include <lib/base/sigc.h>
+#include <vector>
 
 #ifdef HAVE_MALI
 #include <EGL/egl.h>
@@ -24,13 +26,13 @@ struct AnimationFrame {
 
 class eGLSAnimationParams {
 public:
-    enum {
+    enum AnimationType {
         TYPE_FADE,
         TYPE_SLIDE,
         TYPE_ZOOM
     };
     
-    int type;
+    AnimationType type;
     int duration;  // milliseconds
     int fps;       // frames per second
     int easing;    // easing function type
@@ -53,7 +55,8 @@ public:
         endValue(100) {}
 };
 
-class eGLSAnimation: public Object {
+class eGLSAnimation: public iObject
+{
     DECLARE_REF(eGLSAnimation);
     
 public:
@@ -78,7 +81,7 @@ private:
     // Buffer implementation
     static const int BUFFER_SIZE = 60;  // 1 second at 60fps
     std::vector<AnimationFrame> m_frame_buffer;
-    int m_buffer_index;
+    size_t m_buffer_index;  // Changed from int to size_t
     bool m_buffer_ready;
     
     // Buffer management methods
