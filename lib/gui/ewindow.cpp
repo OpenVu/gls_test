@@ -34,7 +34,7 @@ eWindow::~eWindow()
     if (m_animation)
     {
         m_animation->stop();
-        delete m_animation;
+        //delete m_animation;
         m_animation = nullptr;
     }
     m_desktop->removeRootWidget(this);
@@ -130,7 +130,7 @@ void eWindow::clearAnimation()
     if (m_animation)
     {
         m_animation->stop();
-        delete m_animation;
+        //delete m_animation;
         m_animation = nullptr;
     }
 }
