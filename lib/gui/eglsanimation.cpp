@@ -3,6 +3,7 @@
 #include <lib/base/init_num.h>
 #include <lib/gdi/grc.h>
 #include <cmath>
+#include <GLES2/gl2.h> // For OpenGL ES 2.0
 
 DEFINE_REF(eGLSAnimation);
 
@@ -268,11 +269,6 @@ void eGLSAnimation::renderBufferedFrame()
         0.0f, 1.0f   // Bottom Left
     };
 
-    // Create and bind a Vertex Array Object (VAO)
-    GLuint vao;
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-
     // Create and bind a Vertex Buffer Object (VBO) for vertices
     GLuint vbo;
     glGenBuffers(1, &vbo);
@@ -293,17 +289,13 @@ void eGLSAnimation::renderBufferedFrame()
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (GLvoid*)0);
     glEnableVertexAttribArray(1);
 
-    // Unbind the VBOs
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
     // Draw the quad
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
     // Clean up
-    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
     glDeleteBuffers(1, &vbo);
     glDeleteBuffers(1, &texVbo);
-    glDeleteVertexArrays(1, &vao);
 
     m_buffer_index++;
 }
