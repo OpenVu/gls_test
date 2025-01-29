@@ -89,6 +89,10 @@ private:
     std::vector<AnimationFrame> m_frame_buffer;
     size_t m_buffer_index;  // Changed from int to size_t
     bool m_buffer_ready;
+
+    // Double buffering members
+    GLuint m_fbo; // Framebuffer object
+    GLuint m_colorTexture; // Texture for the color buffer
     
     // Buffer management methods
     void prepareFrameBuffer();
