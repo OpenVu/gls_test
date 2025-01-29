@@ -65,7 +65,7 @@ public:
     void pause();
     void resume();
     
-    Signal0<void> animationFinished;
+    PSignal0<void> animationFinished;
     
 private:
     eWidget *m_widget;
