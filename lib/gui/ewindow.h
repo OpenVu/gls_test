@@ -33,6 +33,7 @@ protected:
     int event(int event, void *data = 0, void *data2 = 0);
     
 private:
+    enum { evtTitleChanged = evtUserWidget };
     eWidget *m_child;
     std::string m_title;
     int m_flags;
