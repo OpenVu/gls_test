@@ -3,7 +3,6 @@
 
 #include <lib/gui/ewidget.h>
 #include <lib/base/ebase.h>
-#include <lib/base/sigc.h>
 #include <lib/base/object.h>
 #include <lib/gdi/gpixmap.h>
 
