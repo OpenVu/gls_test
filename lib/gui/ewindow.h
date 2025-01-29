@@ -10,37 +10,31 @@ class eWindow: public eWidget
 {
     friend class eWindowStyle;
 public:
+    enum {
+        wfNoBorder = 1
+    };
+    
     eWindow(eWidgetDesktop *desktop, int z = 0);
     ~eWindow();
+    
     void setTitle(const std::string &string);
     std::string getTitle() const;
-    eWidget *child() { return m_child; }
-
-    enum {
-        wfNoBorder = 1,
-        flagHasTrans = 2,
-        flagNoAnimated = 4
-    };
-
+    
     void setBackgroundColor(const gRGB &col);
-
+    
     void setFlag(int flags);
     void clearFlag(int flags);
     
-    // GLS Animation support
-    void setAnimation(eGLSAnimationType type, int duration = 500);
+    // Updated GLS Animation support with buffered system
+    void setAnimation(eGLSAnimationParams::AnimationType type, int duration = 500, int fps = 60);
     void clearAnimation();
-
+    
 protected:
-    enum eWindowEvents
-    {
-        evtTitleChanged = evtUserWidget,
-    };
-    int event(int event, void *data=0, void *data2=0);
-
+    int event(int event, void *data = 0, void *data2 = 0);
+    
 private:
-    std::string m_title;
     eWidget *m_child;
+    std::string m_title;
     int m_flags;
     eWidgetDesktop *m_desktop;
     ePtr<eGLSAnimation> m_animation;
