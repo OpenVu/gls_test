@@ -272,9 +272,9 @@ typedef long time_t;
 %}
 
 // Make the enum values available as constants
-%constant int TYPE_FADE = TYPE_FADE;
-%constant int TYPE_SLIDE = TYPE_SLIDE;
-%constant int TYPE_ZOOM = TYPE_ZOOM;
+//%constant int TYPE_FADE = TYPE_FADE;
+//%constant int TYPE_SLIDE = TYPE_SLIDE;
+//%constant int TYPE_ZOOM = TYPE_ZOOM;
 
 // Allow Python to use AnimationParams
 %extend eGLSAnimationParams {
