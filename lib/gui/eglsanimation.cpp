@@ -153,11 +153,11 @@ void eGLSAnimation::prepareFrameBuffer()
     m_buffer_index = 0;
     
     // Calculate total frames based on duration and FPS
-    int totalFrames = (m_params.duration * m_params.fps) / 1000;
+    size_t totalFrames = static_cast<size_t>((m_params.duration * m_params.fps) / 1000);
     float frameStep = 1.0f / totalFrames;
     
     // Pre-calculate frames
-    for (int i = 0; i < totalFrames && i < BUFFER_SIZE; i++)
+    for (size_t i = 0; i < totalFrames && i < BUFFER_SIZE; i++)
     {
         float progress = i * frameStep;
         AnimationFrame frame;
