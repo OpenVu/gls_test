@@ -158,23 +158,32 @@ AnimationFrame eGLSAnimation::calculateFadeFrame(float progress)
 
 void eGLSAnimation::setupDoubleBuffer()
 {
+    // Get the width and height of the widget
+    int width = m_widget->size().width();
+    int height = m_widget->size().height();
+
+    // Generate the framebuffer
     glGenFramebuffers(1, &m_fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
 
+    // Create a texture to render to
     glGenTextures(1, &m_colorTexture);
     glBindTexture(GL_TEXTURE_2D, m_colorTexture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // Attach the texture to the framebuffer
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_colorTexture, 0);
 
+    // Check if framebuffer is complete
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
         eDebug("[eGLSAnimation] Framebuffer not complete!");
     }
 
+    // Unbind the framebuffer
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
-
 void eGLSAnimation::prepareFrameBuffer()
 {
     // Clear existing buffer
