@@ -54,6 +54,13 @@ public:
         endValue(100) {}
 };
 
+// Expose the AnimationType enum to SWIG
+#ifdef SWIG
+%constant int TYPE_FADE = eGLSAnimationParams::TYPE_FADE;
+%constant int TYPE_SLIDE = eGLSAnimationParams::TYPE_SLIDE;
+%constant int TYPE_ZOOM = eGLSAnimationParams::TYPE_ZOOM;
+#endif
+
 class eGLSAnimation: public iObject
 {
     DECLARE_REF(eGLSAnimation);
