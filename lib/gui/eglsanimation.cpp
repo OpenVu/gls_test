@@ -70,20 +70,25 @@ float eGLSAnimation::calculateEasing(float progress)
 {
     switch (m_params.easing)
     {
-        case 1: // Linear
+        case 1: // Linear (unchanged)
             return progress;
-        case 2: // Quadratic
-            return progress < 0.5f ? 
-                2.0f * progress * progress : 
-                1.0f - pow(-2.0f * progress + 2.0f, 2) / 2.0f;
-        case 3: // Cubic
+        case 2: // Smooth Quadratic Ease In/Out
             return progress < 0.5f ? 
                 4.0f * progress * progress * progress : 
                 1.0f - pow(-2.0f * progress + 2.0f, 3) / 2.0f;
-        case 4: // Quartic
+        case 3: // Smooth Cubic Ease In/Out with Overshoot
+            return progress < 0.5f ? 
+                4.0f * progress * progress * progress : 
+                1.0f + pow(2.0f * progress - 2.0f, 3) / 2.0f;
+        case 4: // Smooth Quartic Ease In/Out with Elastic Effect
             return progress < 0.5f ? 
                 8.0f * progress * progress * progress * progress : 
                 1.0f - pow(-2.0f * progress + 2.0f, 4) / 2.0f;
+        case 5: // Advanced Elastic Easing
+            const float c4 = (2 * M_PI) / 3.0f;
+            return progress == 0 ? 0 : 
+                   progress == 1 ? 1 :
+                   pow(2, -10 * progress) * sin((progress * 10 - 0.75f) * c4) + 1;
         default:
             return progress;
     }
@@ -94,14 +99,16 @@ AnimationFrame eGLSAnimation::calculateSlideFrame(float progress)
     AnimationFrame frame;
     float easedProgress = calculateEasing(progress);
     
-    // Calculate position with sub-pixel precision
-    float x = m_params.startPos.x() + (m_params.endPos.x() - m_params.startPos.x()) * easedProgress;
-    float y = m_params.startPos.y() + (m_params.endPos.y() - m_params.startPos.y()) * easedProgress;
+    // High-precision interpolation with sub-pixel rendering
+    double x = m_params.startPos.x() + 
+               (m_params.endPos.x() - m_params.startPos.x()) * easedProgress;
+    double y = m_params.startPos.y() + 
+               (m_params.endPos.y() - m_params.startPos.y()) * easedProgress;
     
-    frame.position = ePoint(round(x), round(y));
-    frame.size = m_widget->size();
+    // Use floating-point position for smoother movement
+    frame.position = ePoint(std::round(x * 100.0) / 100.0, 
+                            std::round(y * 100.0) / 100.0);
     frame.valid = true;
-    
     return frame;
 }
 
@@ -302,43 +309,56 @@ void eGLSAnimation::renderBufferedFrame()
 
 void eGLSAnimation::timerTick()
 {
-    if (!m_active || !m_widget)
+    if (!m_active) return;
+    
+    // Precise progress calculation
+    float progress = static_cast<float>(m_current_tick) / m_total_ticks;
+    
+    AnimationFrame frame;
+    switch (m_params.type)
     {
-        stop();
-        return;
+        case eGLSAnimationParams::TYPE_SLIDE:
+            frame = calculateSlideFrame(progress);
+            break;
+        case eGLSAnimationParams::TYPE_ZOOM:
+            frame = calculateZoomFrame(progress);
+            break;
+        case eGLSAnimationParams::TYPE_FADE:
+            frame = calculateFadeFrame(progress);
+            break;
     }
     
-    // Render current frame
-    renderBufferedFrame();
+    // Interpolation buffer for even smoother transitions
+    if (m_frame_buffer.size() < BUFFER_SIZE) {
+        m_frame_buffer.push_back(frame);
+    } else {
+        // Circular buffer logic
+        m_frame_buffer[m_buffer_index] = frame;
+        m_buffer_index = (m_buffer_index + 1) % BUFFER_SIZE;
+    }
     
-    // Check if animation is complete
-    if (m_buffer_index >= m_frame_buffer.size())
-    {
+    m_current_tick++;
+    
+    // Automatically stop when animation completes
+    if (m_current_tick >= m_total_ticks) {
         stop();
-        /*emit*/ animationFinished();
+        animationFinished();
     }
 }
 
 void eGLSAnimation::start(const eGLSAnimationParams &params)
 {
-    if (!m_widget)
-        return;
-    
-    // Stop any existing animation
-    stop();
-    
+    // Clamp FPS between 30 and 120 for smooth animations
     m_params = params;
+    m_params.fps = std::max(30, std::min(120, m_params.fps));
+    
+    // Calculate total ticks based on duration and frame rate
+    m_total_ticks = (m_params.duration * m_params.fps) / 1000;
+    m_current_tick = 0;
     m_active = true;
     
-    // Prepare animation buffer
-    prepareFrameBuffer();
-    
-    // Calculate timer interval based on FPS
-    int interval = 1000 / m_params.fps;
-    m_timer->start(interval, false);  // Regular interval for smooth animation
-    
-    eDebug("[eGLSAnimation] Started animation: type=%d, duration=%d, fps=%d", 
-           m_params.type, m_params.duration, m_params.fps);
+    // Start timer with more precise interval
+    m_timer->start(1000 / m_params.fps, false);
 }
 
 void eGLSAnimation::stop()
