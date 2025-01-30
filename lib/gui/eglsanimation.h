@@ -1,81 +1,49 @@
 #ifndef __lib_gui_eglsanimation_h
 #define __lib_gui_eglsanimation_h
 
-#include <lib/gui/ewidget.h>
-#include <lib/base/ebase.h>
 #include <lib/base/object.h>
+#include <lib/base/ebase.h>
+#include <lib/gui/ewidget.h>
 #include <lib/gdi/gpixmap.h>
-#include <vector>
 
 #ifdef HAVE_MALI
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
+#else
+// Dummy types when no EGL/GLES2 is available
+typedef void* EGLDisplay;
+typedef void* EGLSurface;
+typedef void* EGLContext;
+typedef void* EGLConfig;
+typedef unsigned int GLuint;
 #endif
 
-// Animation frame structure for buffering
-struct AnimationFrame {
-    ePoint position;
-    eSize size;
-    float opacity;
-    float scale;
-    bool valid;
-    
-    AnimationFrame() : opacity(1.0f), scale(1.0f), valid(false) {}
+enum eGLSAnimationType {
+    TYPE_FADE = 0,
+    TYPE_SLIDE = 1,
+    TYPE_ZOOM = 2
 };
 
-class eGLSAnimationParams {
-public:
-    enum AnimationType {
-        TYPE_FADE,
-        TYPE_SLIDE,
-        TYPE_ZOOM
-    };
-    
-    AnimationType type;
-    int duration;  // milliseconds
-    int fps;       // frames per second
-    int easing;    // easing function type
-    
-    // Slide parameters
+struct eGLSAnimationParams {
+    eGLSAnimationType type;
+    int startValue;
+    int endValue;
+    int duration;  // in milliseconds
     ePoint startPos;
     ePoint endPos;
-    
-    // Zoom parameters
-    int startValue;  // start size in percentage
-    int endValue;    // end size in percentage
-    ePoint center;   // zoom center point
-    
-    eGLSAnimationParams() :
-        type(TYPE_SLIDE),
-        duration(250),
-        fps(60),
-        easing(3),
-        startValue(100),
-        endValue(100) {}
+    ePoint center;
+
+    eGLSAnimationParams() : 
+        type(TYPE_FADE),
+        startValue(0),
+        endValue(100),
+        duration(1000) {}
 };
 
-// Expose the AnimationType enum to SWIG
-#ifdef SWIG
-%constant int TYPE_FADE = eGLSAnimationParams::TYPE_FADE;
-%constant int TYPE_SLIDE = eGLSAnimationParams::TYPE_SLIDE;
-%constant int TYPE_ZOOM = eGLSAnimationParams::TYPE_ZOOM;
-#endif
-
-class eGLSAnimation: public iObject
+class eGLSAnimation : public iObject
 {
     DECLARE_REF(eGLSAnimation);
-    
-public:
-    eGLSAnimation(eWidget *widget);
-    virtual ~eGLSAnimation();
-    
-    void start(const eGLSAnimationParams &params);
-    void stop();
-    void pause();
-    void resume();
-    
-    PSignal0<void> animationFinished;
-    
+
 private:
     eWidget *m_widget;
     ePtr<eTimer> m_timer;
@@ -83,44 +51,43 @@ private:
     int m_current_tick;
     int m_total_ticks;
     bool m_active;
-    
-    // Buffer implementation
-    static const int BUFFER_SIZE = 60;  // 1 second at 60fps
-    std::vector<AnimationFrame> m_frame_buffer;
-    size_t m_buffer_index;  // Changed from int to size_t
-    bool m_buffer_ready;
 
-    // Double buffering members
-    GLuint m_fbo; // Framebuffer object
-    GLuint m_colorTexture; // Texture for the color buffer
-
-    // Buffer management methods
-    void prepareFrameBuffer();
-    void renderBufferedFrame();
-    void setupDoubleBuffer();
-    float calculateEasing(float progress);
-    
-    // Frame calculation methods
-    AnimationFrame calculateSlideFrame(float progress);
-    AnimationFrame calculateZoomFrame(float progress);
-    AnimationFrame calculateFadeFrame(float progress);
-    
-    // Timer callback
-    void timerTick();
-    
 #ifdef HAVE_MALI
-    // GLES/EGL members
     EGLDisplay m_eglDisplay;
     EGLConfig m_eglConfig;
     EGLContext m_eglContext;
     EGLSurface m_eglSurface;
     GLuint m_program;
     GLuint m_texture;
-    
+#endif
+
+    void applyFade(float progress);
+    void applySlide(float progress);
+    void applyZoom(float progress);
+
+#ifdef HAVE_MALI
     bool initEGL();
     void cleanupEGL();
     bool createShaders();
 #endif
+
+protected:
+    void timerTick();
+
+public:
+    eGLSAnimation(eWidget *widget);
+    virtual ~eGLSAnimation();
+
+    void start(const eGLSAnimationParams &params);
+    void stop();
+    void pause();
+    void resume();
+
+    // Getter for widget
+    eWidget *getWidget() const { return m_widget; }
+    PSignal0<void> animationFinished;
+
+    bool isRunning() const { return m_active; }
 };
 
 #endif // __lib_gui_eglsanimation_h
