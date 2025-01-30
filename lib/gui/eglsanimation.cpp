@@ -317,38 +317,52 @@ void eGLSAnimation::renderBufferedFrame()
 
 void eGLSAnimation::timerTick()
 {
-    if (!m_active) return;
+    // Ensure animation is active
+    if (!m_active) {
+        eDebug("[eGLSAnimation] Animation not active");
+        return;
+    }
     
-    // Precise progress calculation
+    // Calculate progress
     float progress = static_cast<float>(m_current_tick) / m_total_ticks;
     
+    // Detailed logging for each tick
+    eDebug("[eGLSAnimation] Tick: %d/%d (Progress: %.2f)", 
+           m_current_tick, m_total_ticks, progress);
+    
+    // Calculate frame based on animation type
     AnimationFrame frame;
     switch (m_params.type)
     {
-        case eGLSAnimationParams::TYPE_SLIDE:
-            frame = calculateSlideFrame(progress);
-            break;
-        case eGLSAnimationParams::TYPE_ZOOM:
-            frame = calculateZoomFrame(progress);
-            break;
-        case eGLSAnimationParams::TYPE_FADE:
+        case TYPE_FADE:
             frame = calculateFadeFrame(progress);
             break;
+        case TYPE_SLIDE:
+            frame = calculateSlideFrame(progress);
+            break;
+        case TYPE_ZOOM:
+            frame = calculateZoomFrame(progress);
+            break;
+        default:
+            eDebug("[eGLSAnimation] Unknown animation type: %d", m_params.type);
+            stop();
+            return;
     }
     
-    // Interpolation buffer for even smoother transitions
-    if (m_frame_buffer.size() < BUFFER_SIZE) {
-        m_frame_buffer.push_back(frame);
-    } else {
-        // Circular buffer logic
-        m_frame_buffer[m_buffer_index] = frame;
-        m_buffer_index = (m_buffer_index + 1) % BUFFER_SIZE;
-    }
+    // Additional logging for frame details
+    eDebug("[eGLSAnimation] Frame:");
+    eDebug("[eGLSAnimation]   Position: %d, %d", 
+           frame.position.x(), frame.position.y());
+    eDebug("[eGLSAnimation]   Opacity: %.2f", frame.opacity);
+    eDebug("[eGLSAnimation]   Scale: %.2f", frame.scale);
     
+    // Increment tick
     m_current_tick++;
     
-    // Automatically stop when animation completes
-    if (m_current_tick >= m_total_ticks) {
+    // Check if animation is complete
+    if (m_current_tick >= m_total_ticks)
+    {
+        eDebug("[eGLSAnimation] Animation completed");
         stop();
         animationFinished();
     }
@@ -356,17 +370,27 @@ void eGLSAnimation::timerTick()
 
 void eGLSAnimation::start(const eGLSAnimationParams &params)
 {
-    // Clamp FPS between 30 and 120 for smooth animations
+    // Reset animation state
     m_params = params;
-    m_params.fps = std::max(30, std::min(120, m_params.fps));
-    
-    // Calculate total ticks based on duration and frame rate
-    m_total_ticks = (m_params.duration * m_params.fps) / 1000;
     m_current_tick = 0;
+    m_total_ticks = (m_params.duration * m_params.fps) / 1000;
     m_active = true;
     
-    // Start timer with more precise interval
+    // Validate widget
+    if (!m_widget) {
+        eDebug("[eGLSAnimation] Invalid widget for animation");
+        return;
+    }
+    
+    // Start timer with precise interval
     m_timer->start(1000 / m_params.fps, false);
+    
+    // Detailed logging
+    eDebug("[eGLSAnimation] Started animation:");
+    eDebug("[eGLSAnimation]   Type: %d", m_params.type);
+    eDebug("[eGLSAnimation]   Duration: %d ms", m_params.duration);
+    eDebug("[eGLSAnimation]   FPS: %d", m_params.fps);
+    eDebug("[eGLSAnimation]   Total Ticks: %d", m_total_ticks);
 }
 
 void eGLSAnimation::stop()
