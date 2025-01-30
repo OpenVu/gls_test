@@ -1,38 +1,36 @@
 #include <lib/gui/ewindow.h>
 #include <lib/gui/ewidgetdesktop.h>
-
 #include <lib/gui/ewindowstyle.h>
 #include <lib/gui/ewindowstyleskinned.h>
-
 #include <lib/gdi/epng.h>
-#include <lib/gui/eglsanimation.h>
 
-eWindow::eWindow(eWidgetDesktop *desktop, int z): eWidget(0)
+eWindow::eWindow(eWidgetDesktop *desktop, int z): 
+    eWidget(0),
+    eWidgetAnimation(this)  // Initialize the animation base class with this widget
 {
-	m_flags = 0;
-	m_desktop = desktop;
-	m_animation = nullptr;
-		/* ask style manager for current style */
-	ePtr<eWindowStyleManager> mgr;
-	eWindowStyleManager::getInstance(mgr);
+    m_flags = 0;
+    m_desktop = desktop;
+    /* ask style manager for current style */
+    ePtr<eWindowStyleManager> mgr;
+    eWindowStyleManager::getInstance(mgr);
 
-	ePtr<eWindowStyle> style;
-	if (mgr)
-		mgr->getStyle(desktop->getStyleID(), style);
+    ePtr<eWindowStyle> style;
+    if (mgr)
+        mgr->getStyle(desktop->getStyleID(), style);
 
-		/* when there is either no style manager or no style, revert to simple style. */
-	if (!style)
-		style = new eWindowStyleSimple();
+    /* when there is either no style manager or no style, revert to simple style. */
+    if (!style)
+        style = new eWindowStyleSimple();
 
-	setStyle(style);
+    setStyle(style);
 
-	setZPosition(z); /* must be done before addRootWidget */
+    setZPosition(z); /* must be done before addRootWidget */
 
-		/* we are the parent for the child window. */
-		/* as we are in the constructor, this is thread safe. */
-	m_child = this;
-	m_child = new eWidget(this);
-	desktop->addRootWidget(this);
+    /* we are the parent for the child window. */
+    /* as we are in the constructor, this is thread safe. */
+    m_child = this;
+    m_child = new eWidget(this);
+    desktop->addRootWidget(this);
 }
 
 eWindow::~eWindow()
@@ -69,49 +67,6 @@ void eWindow::setFlag(int flags)
 void eWindow::clearFlag(int flags)
 {
 	m_flags &= ~flags;
-}
-
-void eWindow::setAnimation(eGLSAnimationType type, int duration)
-{
-    if (!m_animation)
-        m_animation = new eGLSAnimation(this);
-
-    //eGLSAnimation::AnimationParams params;
-    eGLSAnimationParams params;	
-    params.type = type;
-    params.duration = duration;
-    
-    switch (type)
-    {
-        case TYPE_FADE:
-            params.startValue = 0;
-            params.endValue = 100;
-            break;
-            
-        case TYPE_SLIDE:
-            {
-                ePoint current = position();
-                params.startPos = ePoint(current.x() - 100, current.y());
-                params.endPos = current;
-            }
-            break;
-            
-        case TYPE_ZOOM:
-            params.startValue = 50;
-            params.endValue = 100;
-            break;
-    }
-    
-    m_animation->start(params);
-}
-
-void eWindow::clearAnimation()
-{
-    if (m_animation)
-    {
-        m_animation->stop();
-        m_animation = nullptr;
-    }
 }
 
 int eWindow::event(int event, void *data, void *data2)
@@ -157,4 +112,11 @@ int eWindow::event(int event, void *data, void *data2)
 		break;
 	}
 	return eWidget::event(event, data, data2);
+}
+
+void eWindow::setCornerRadius(int radius, int edges)
+{
+	/* set corner radius for child, too */
+	eWidget::setCornerRadius(radius, edges);
+	m_child->setCornerRadius(radius, edges);
 }
