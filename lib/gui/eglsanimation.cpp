@@ -68,6 +68,9 @@ eGLSAnimation::~eGLSAnimation()
 
 float eGLSAnimation::calculateEasing(float progress)
 {
+    // Define a small epsilon for floating-point comparisons
+    const float EPSILON = 1e-6f;
+
     switch (m_params.easing)
     {
         case 1: // Linear (unchanged)
@@ -85,10 +88,15 @@ float eGLSAnimation::calculateEasing(float progress)
                 8.0f * progress * progress * progress * progress : 
                 1.0f - pow(-2.0f * progress + 2.0f, 4) / 2.0f;
         case 5: // Advanced Elastic Easing
+        {
             const float c4 = (2 * M_PI) / 3.0f;
-            return progress == 0 ? 0 : 
-                   progress == 1 ? 1 :
-                   pow(2, -10 * progress) * sin((progress * 10 - 0.75f) * c4) + 1;
+            
+            // Use epsilon-based comparison instead of direct equality
+            if (std::abs(progress) < EPSILON) return 0.0f;
+            if (std::abs(progress - 1.0f) < EPSILON) return 1.0f;
+            
+            return pow(2, -10 * progress) * sin((progress * 10 - 0.75f) * c4) + 1;
+        }
         default:
             return progress;
     }
