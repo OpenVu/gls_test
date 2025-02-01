@@ -1,5 +1,5 @@
-#ifndef __grc_h
-#define __grc_h
+#ifndef __lib_gdi_grc_h
+#define __lib_gdi_grc_h
 
 /*
 	gPainter ist die high-level version. die highlevel daten werden zu low level opcodes ueber
@@ -17,6 +17,7 @@
 #include <vector>
 
 #include <string>
+#include <lib/base/object.h>
 #include <lib/base/elock.h>
 #include <lib/base/message.h>
 #include <lib/gdi/erect.h>
@@ -29,6 +30,14 @@
 #include <GLES2/gl2.h>
 #include <EGL/egl.h>
 #endif
+
+// Blit flags
+enum {
+    BT_ALPHATEST = 1,
+    BT_ALPHABLEND = 2,
+    BT_SCALE = 4,
+    BT_KEEP_ASPECT_RATIO = 8,
+};
 
 class eTextPara;
 
@@ -264,7 +273,7 @@ public:
 #endif
 };
 
-class gDC : public iObject
+class gDC: public iObject
 {
     DECLARE_REF(gDC);
 
@@ -279,6 +288,7 @@ protected:
     GLuint m_shaderProgram;
     bool m_glesInitialized;
 
+protected:
     // OpenGL ES methods
     void initOpenGLES();
     void cleanupOpenGLES();
@@ -315,6 +325,10 @@ public:
     gDC(gPixmap *pixmap);
     gDC();
     virtual ~gDC();
+    
+    void setScale(int scale);
+    void setOpacity(int opacity);
+    void setTransform(const ePoint& translation);
     
     gRegion &getClip() { return m_current_clip; }
     int getPixmap(ePtr<gPixmap> &pm)
