@@ -2179,64 +2179,6 @@ void gPixmap::blit(const gPixmap &src, const eRect &_pos, const gRegion &clip, i
 
 #undef FIX
 
-void gPixmap::setAlpha(int alpha)
-{
-    if (!surface)
-        return;
-        
-    if (surface->bpp != 32)
-        return;
-        
-    uint8_t *srcptr = (uint8_t*)surface->data;
-    for (int y = 0; y < surface->y; ++y)
-    {
-        for (int x = 0; x < surface->x; ++x)
-        {
-            srcptr[3] = alpha;
-            srcptr += 4;
-        }
-    }
-}
-
-void gPixmap::move(const ePoint &pos)
-{
-    m_position = pos;
-    // The actual movement is handled by the compositor/window manager
-}
-
-void gPixmap::resize(const eSize &size)
-{
-    if (!surface)
-        return;
-
-    if (size == eSize(surface->x, surface->y))
-        return;
-
-    // Create new surface with acceleration same as current surface
-    gSurface *new_surface = new gSurface(size.width(), size.height(), surface->bpp, gPixmap::accelAuto);
-    
-    // Copy data from old surface to new surface
-    if (surface->data && new_surface->data)
-    {
-        int src_stride = surface->stride;
-        int dst_stride = new_surface->stride;
-        int bytes_to_copy = std::min(src_stride, dst_stride);
-        int height = std::min(surface->y, new_surface->y);
-        
-        for (int i = 0; i < height; i++)
-        {
-            memcpy(
-                (uint8_t*)new_surface->data + i * dst_stride,
-                (uint8_t*)surface->data + i * src_stride,
-                bytes_to_copy);
-        }
-    }
-
-    // Delete old surface and assign new one
-    delete surface;
-    surface = new_surface;
-}
-
 void gPixmap::mergePalette(const gPixmap &target)
 {
 	if (surface->clut.colors <= 0 || target.surface->clut.colors <= 0)
