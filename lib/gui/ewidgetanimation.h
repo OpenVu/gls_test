@@ -1,72 +1,188 @@
-#ifndef __lib_gui_ewidgetanimation_h
-#define __lib_gui_ewidgetanimation_h
+#include <lib/gui/ewidgetanimation.h>
+#include <lib/gdi/grc.h>
 
-#include <lib/base/ebase.h>
-#include <lib/gui/ewidget.h>
-
-class eWidgetAnimation: public Object
+eWidgetAnimation::eWidgetAnimation(eWidget* widget)
+    : m_widget(widget)
+    , m_type(NONE)
+    , m_easing(EASE_LINEAR)
+    , m_duration(0)
+    , m_startTime(0)
+    , m_isRunning(false)
+    , m_scale(1.0f)
+    , m_opacity(1.0f)
+    , m_translation(ePoint(0, 0))
 {
-    DECLARE_REF(eWidgetAnimation);
+}
 
-public:
-    enum AnimationType {
-        NONE,
-        MOVE,
-        ZOOM,
-        FADE_IN,
-        FADE_OUT,
-        SLIDE
-    };
+void eWidgetAnimation::start(AnimationType type, EasingType easing, int duration)
+{
+    if (m_isRunning) {
+        stop();
+    }
 
-    enum EasingType {
-        EASE_LINEAR,
-        EASE_IN,
-        EASE_OUT,
-        EASE_INOUT
-    };
+    m_type = type;
+    m_easing = easing;
+    m_duration = duration;
+    m_startTime = eTimer::getTimestamp();
+    m_isRunning = true;
 
-    eWidgetAnimation(eWidget* widget);
+    // Store initial values
+    m_startScale = m_scale;
+    m_startOpacity = m_opacity;
+    m_startTranslation = m_translation;
 
-    void start(AnimationType type, EasingType easing, int duration);
-    void stop();
-    void setTargetPosition(const ePoint& pos);
-    bool isRunning() const;
+    // Set target values based on animation type
+    switch (m_type) {
+        case MOVE:
+            // Target translation will be set by setTargetPosition
+            break;
+        case ZOOM:
+            m_targetScale = 2.0f;  // Double the size
+            break;
+        case FADE_IN:
+            m_startOpacity = 0.0f;
+            m_targetOpacity = 1.0f;
+            break;
+        case FADE_OUT:
+            m_startOpacity = 1.0f;
+            m_targetOpacity = 0.0f;
+            break;
+        case SLIDE:
+            // Target translation will be set by setTargetPosition
+            break;
+        default:
+            break;
+    }
 
-    // Getters for current animation state
-    float getScale() const;
-    float getOpacity() const;
-    ePoint getTranslation() const;
+    // Start the animation timer
+    m_timer = eTimer::create(eApp);
+    CONNECT(m_timer->timeout, eWidgetAnimation::tick);
+    m_timer->start(16);  // ~60 FPS
+}
 
-private:
-    eWidget* m_widget;
-    ePtr<eTimer> m_timer;
+void eWidgetAnimation::stop()
+{
+    if (!m_isRunning)
+        return;
 
-    // Animation properties
-    AnimationType m_type;
-    EasingType m_easing;
-    int m_duration;
-    uint64_t m_startTime;
-    bool m_isRunning;
+    m_isRunning = false;
+    if (m_timer) {
+        m_timer->stop();
+        m_timer = nullptr;
+    }
 
-    // Animation state
-    float m_scale;
-    float m_opacity;
-    ePoint m_translation;
+    // Reset to final values
+    switch (m_type) {
+        case FADE_OUT:
+            m_opacity = 0.0f;
+            break;
+        case FADE_IN:
+            m_opacity = 1.0f;
+            break;
+        default:
+            break;
+    }
 
-    // Start values
-    float m_startScale;
-    float m_startOpacity;
-    ePoint m_startTranslation;
+    // Update the widget's final state
+    updateWidgetState();
+}
 
-    // Target values
-    float m_targetScale;
-    float m_targetOpacity;
-    ePoint m_targetTranslation;
+void eWidgetAnimation::tick()
+{
+    if (!m_isRunning)
+        return;
 
-    // Helper methods
-    void tick();
-    float applyEasing(float t);
-    void updateWidgetState();
-};
+    uint64_t currentTime = eTimer::getTimestamp();
+    float progress = (float)(currentTime - m_startTime) / m_duration;
 
-#endif
+    if (progress >= 1.0f) {
+        stop();
+        return;
+    }
+
+    // Apply easing function
+    float easedProgress = applyEasing(progress);
+
+    // Update current values based on animation type
+    switch (m_type) {
+        case MOVE:
+        case SLIDE:
+            m_translation.setX(m_startTranslation.x() + (m_targetTranslation.x() - m_startTranslation.x()) * easedProgress);
+            m_translation.setY(m_startTranslation.y() + (m_targetTranslation.y() - m_startTranslation.y()) * easedProgress);
+            break;
+        case ZOOM:
+            m_scale = m_startScale + (m_targetScale - m_startScale) * easedProgress;
+            break;
+        case FADE_IN:
+        case FADE_OUT:
+            m_opacity = m_startOpacity + (m_targetOpacity - m_startOpacity) * easedProgress;
+            break;
+        default:
+            break;
+    }
+
+    // Update the widget's state
+    updateWidgetState();
+}
+
+float eWidgetAnimation::applyEasing(float t)
+{
+    switch (m_easing) {
+        case EASE_IN:
+            return t * t;
+        case EASE_OUT:
+            return t * (2 - t);
+        case EASE_INOUT:
+            return t < 0.5f ? 2 * t * t : -1 + (4 - 2 * t) * t;
+        case EASE_LINEAR:
+        default:
+            return t;
+    }
+}
+
+void eWidgetAnimation::setTargetPosition(const ePoint& pos)
+{
+    if (m_type == MOVE || m_type == SLIDE) {
+        m_targetTranslation = pos;
+    }
+}
+
+void eWidgetAnimation::updateWidgetState()
+{
+    if (!m_widget)
+        return;
+
+    // Create an animation update opcode
+    gOpcode op;
+    op.opcode = gOpcode::updateAnimation;
+    op.parm.animation = this;
+
+    // Get the widget's DC and execute the opcode
+    gDC *dc = m_widget->getDC();
+    if (dc) {
+        dc->exec(&op);
+    }
+
+    // Invalidate the widget to trigger a redraw
+    m_widget->invalidate();
+}
+
+bool eWidgetAnimation::isRunning() const
+{
+    return m_isRunning;
+}
+
+float eWidgetAnimation::getScale() const
+{
+    return m_scale;
+}
+
+float eWidgetAnimation::getOpacity() const
+{
+    return m_opacity;
+}
+
+ePoint eWidgetAnimation::getTranslation() const
+{
+    return m_translation;
+}
