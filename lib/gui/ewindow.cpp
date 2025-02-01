@@ -1,36 +1,36 @@
 #include <lib/gui/ewindow.h>
 #include <lib/gui/ewidgetdesktop.h>
+
 #include <lib/gui/ewindowstyle.h>
 #include <lib/gui/ewindowstyleskinned.h>
+
 #include <lib/gdi/epng.h>
 
-eWindow::eWindow(eWidgetDesktop *desktop, int z): 
-    eWidget(0),
-    eWidgetAnimation(this)  // Initialize the animation base class with this widget
+eWindow::eWindow(eWidgetDesktop *desktop, int z): eWidget(0)
 {
-    m_flags = 0;
-    m_desktop = desktop;
-    /* ask style manager for current style */
-    ePtr<eWindowStyleManager> mgr;
-    eWindowStyleManager::getInstance(mgr);
+	m_flags = 0;
+	m_desktop = desktop;
+		/* ask style manager for current style */
+	ePtr<eWindowStyleManager> mgr;
+	eWindowStyleManager::getInstance(mgr);
 
-    ePtr<eWindowStyle> style;
-    if (mgr)
-        mgr->getStyle(desktop->getStyleID(), style);
+	ePtr<eWindowStyle> style;
+	if (mgr)
+		mgr->getStyle(desktop->getStyleID(), style);
 
-    /* when there is either no style manager or no style, revert to simple style. */
-    if (!style)
-        style = new eWindowStyleSimple();
+		/* when there is either no style manager or no style, revert to simple style. */
+	if (!style)
+		style = new eWindowStyleSimple();
 
-    setStyle(style);
+	setStyle(style);
 
-    setZPosition(z); /* must be done before addRootWidget */
+	setZPosition(z); /* must be done before addRootWidget */
 
-    /* we are the parent for the child window. */
-    /* as we are in the constructor, this is thread safe. */
-    m_child = this;
-    m_child = new eWidget(this);
-    desktop->addRootWidget(this);
+		/* we are the parent for the child window. */
+		/* as we are in the constructor, this is thread safe. */
+	m_child = this;
+	m_child = new eWidget(this);
+	desktop->addRootWidget(this);
 }
 
 eWindow::~eWindow()
