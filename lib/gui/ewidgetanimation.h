@@ -1,25 +1,72 @@
 #ifndef __lib_gui_ewidgetanimation_h
 #define __lib_gui_ewidgetanimation_h
 
-#include <lib/gdi/esize.h>
-#include <lib/gdi/epoint.h>
+#include <lib/base/ebase.h>
+#include <lib/gui/ewidget.h>
 
-class eWidget;
-
-class eWidgetAnimation
+class eWidgetAnimation: public Object
 {
+    DECLARE_REF(eWidgetAnimation);
+
 public:
-	eWidgetAnimation(eWidget *widget);
+    enum AnimationType {
+        NONE,
+        MOVE,
+        ZOOM,
+        FADE_IN,
+        FADE_OUT,
+        SLIDE
+    };
 
-	void tick(int inc);
+    enum EasingType {
+        EASE_LINEAR,
+        EASE_IN,
+        EASE_OUT,
+        EASE_INOUT
+    };
 
-	void startMoveAnimation(ePoint start, ePoint end, int length);
+    eWidgetAnimation(eWidget* widget);
 
-	int m_active;
+    void start(AnimationType type, EasingType easing, int duration);
+    void stop();
+    void setTargetPosition(const ePoint& pos);
+    bool isRunning() const;
+
+    // Getters for current animation state
+    float getScale() const;
+    float getOpacity() const;
+    ePoint getTranslation() const;
+
 private:
-	int m_move_current_tick, m_move_length;
-	ePoint m_move_start, m_move_end;
-	eWidget *m_widget;
+    eWidget* m_widget;
+    ePtr<eTimer> m_timer;
+
+    // Animation properties
+    AnimationType m_type;
+    EasingType m_easing;
+    int m_duration;
+    uint64_t m_startTime;
+    bool m_isRunning;
+
+    // Animation state
+    float m_scale;
+    float m_opacity;
+    ePoint m_translation;
+
+    // Start values
+    float m_startScale;
+    float m_startOpacity;
+    ePoint m_startTranslation;
+
+    // Target values
+    float m_targetScale;
+    float m_targetOpacity;
+    ePoint m_targetTranslation;
+
+    // Helper methods
+    void tick();
+    float applyEasing(float t);
+    void updateWidgetState();
 };
 
 #endif
