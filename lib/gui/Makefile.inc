@@ -1,7 +1,3 @@
-//if HAVE_MALI
-//AM_CPPFLAGS += -DHAVE_MALI
-//endif
-
 noinst_LIBRARIES += gui/libenigma_gui.a
 
 gui_libenigma_gui_a_SOURCES = \
