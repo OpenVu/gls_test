@@ -92,7 +92,7 @@ void eGLSAnimation::timerTick()
     if (m_widget) 
     {
         m_widget->invalidate();
-        gRC::getInstance()->redraw(m_widget);
+        //gRC::getInstance()->redraw(m_widget);
     }
     
     if (m_current_tick >= m_total_ticks)
@@ -187,7 +187,7 @@ void eGLSAnimation::applyFade(float progress)
     eDebug("[eGLSAnimation] Fade: progress=%.2f, opacity=%d", progress, opacity);
     m_widget->setTransparent(100 - opacity);  // Convert opacity to transparency (0-100)
     m_widget->invalidate();
-    gRC::getInstance()->redraw(m_widget);
+    //gRC::getInstance()->redraw(m_widget);
 }
 
 void eGLSAnimation::applySlide(float progress)
@@ -200,7 +200,7 @@ void eGLSAnimation::applySlide(float progress)
     m_widget->move(ePoint(x, y));
 
     m_widget->invalidate();
-    gRC::getInstance()->redraw(m_widget);
+    //gRC::getInstance()->redraw(m_widget);
     // Ensure widget is visible during slide
     if (m_current_tick == 1)
     {
@@ -241,7 +241,7 @@ void eGLSAnimation::applyZoom(float progress)
     m_widget->move(ePoint(newX, newY));
 
     m_widget->invalidate();
-    gRC::getInstance()->redraw(m_widget);
+    //gRC::getInstance()->redraw(m_widget);
     // Ensure widget is visible during zoom
     if (m_current_tick == 1)
     {
