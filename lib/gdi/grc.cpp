@@ -8,6 +8,10 @@
 #include <vuplus_gles.h>
 #endif
 
+// Add OpenGL ES 2.0 headers
+#include <EGL/egl.h>
+#include <GLES2/gl2.h>
+
 
 #ifndef SYNC_PAINT
 void *gRC::thread_wrapper(void *ptr)
@@ -17,6 +21,11 @@ void *gRC::thread_wrapper(void *ptr)
 #endif
 
 gRC *gRC::instance = 0;
+
+// Add OpenGL ES 2.0 variables
+EGLDisplay gRC::eglDisplay = EGL_NO_DISPLAY;
+EGLContext gRC::eglContext = EGL_NO_CONTEXT;
+EGLSurface gRC::eglSurface = EGL_NO_SURFACE;
 
 gRC::gRC() : rp(0), wp(0)
 #ifdef SYNC_PAINT
@@ -33,6 +42,12 @@ gRC::gRC() : rp(0), wp(0)
 	m_spinner_enabled = 0;
 	m_spinneronoff = 1;
 	CONNECT(m_notify_pump.recv_msg, gRC::recv_notify);
+
+	// Initialize OpenGL ES 2.0
+        if (!initGLES()) 
+		{
+		eFatal("[gRC] Failed to initialize OpenGL ES 2.0");
+	        }
 #ifndef SYNC_PAINT
 	pthread_mutex_init(&mutex, 0);
 	pthread_cond_init(&cond, 0);
@@ -47,6 +62,75 @@ gRC::gRC() : rp(0), wp(0)
 	else
 		eDebug("[gRC] Thread created successfully.");
 #endif
+}
+
+bool gRC::initGLES() {
+    eglDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    if (eglDisplay == EGL_NO_DISPLAY) {
+        eDebug("[gRC] Failed to get EGL display");
+        return false;
+    }
+
+    EGLint major, minor;
+    if (!eglInitialize(eglDisplay, &major, &minor)) {
+        eDebug("[gRC] Failed to initialize EGL");
+        return false;
+    }
+
+    const EGLint configAttribs[] = {
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+        EGL_RED_SIZE, 8,
+        EGL_GREEN_SIZE, 8,
+        EGL_BLUE_SIZE, 8,
+        EGL_ALPHA_SIZE, 8,
+        EGL_NONE
+    };
+
+    EGLint numConfigs;
+    EGLConfig config;
+    if (!eglChooseConfig(eglDisplay, configAttribs, &config, 1, &numConfigs)) {
+        eDebug("[gRC] Failed to choose EGL config");
+        return false;
+    }
+
+    const EGLint contextAttribs[] = {
+        EGL_CONTEXT_CLIENT_VERSION, 2,
+        EGL_NONE
+    };
+
+    eglContext = eglCreateContext(eglDisplay, config, EGL_NO_CONTEXT, contextAttribs);
+    if (eglContext == EGL_NO_CONTEXT) {
+        eDebug("[gRC] Failed to create EGL context");
+        return false;
+    }
+
+    eglSurface = eglCreateWindowSurface(eglDisplay, config, 0, NULL);
+    if (eglSurface == EGL_NO_SURFACE) {
+        eDebug("[gRC] Failed to create EGL surface");
+        return false;
+    }
+
+    if (!eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext)) {
+        eDebug("[gRC] Failed to make EGL context current");
+        return false;
+    }
+
+    eDebug("[gRC] OpenGL ES 2.0 initialized successfully");
+    return true;
+}
+
+void gRC::cleanupGLES() {
+    if (eglDisplay != EGL_NO_DISPLAY) {
+        eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+        if (eglContext != EGL_NO_CONTEXT) {
+            eglDestroyContext(eglDisplay, eglContext);
+        }
+        if (eglSurface != EGL_NO_SURFACE) {
+            eglDestroySurface(eglDisplay, eglSurface);
+        }
+        eglTerminate(eglDisplay);
+    }
 }
 
 #ifdef CONFIG_ION
@@ -73,6 +157,10 @@ gRC::~gRC()
 	gOpcode o;
 	o.opcode = gOpcode::shutdown;
 	submit(o);
+
+	// Clean up OpenGL ES 2.0
+        cleanupGLES();
+	
 #ifndef SYNC_PAINT
 	eDebug("[gRC] Waiting for gRC thread shutdown.");
 	pthread_join(the_thread, 0);
