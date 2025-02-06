@@ -275,6 +275,9 @@ bool eGLSAnimation::initEGL()
     if (!eglChooseConfig(m_eglDisplay, configAttribs, &m_eglConfig, 1, &numConfigs))
         return false;
 
+    // Add the debug statement here to log the chosen EGL config
+    eDebug("[eGLSAnimation] Chosen EGL config: %p", m_eglConfig);
+
     const EGLint contextAttribs[] = {
         EGL_CONTEXT_CLIENT_VERSION, 2,
         EGL_NONE
