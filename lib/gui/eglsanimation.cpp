@@ -36,19 +36,10 @@ eGLSAnimation::eGLSAnimation(eWidget *widget)
     eDebug("[eGLSAnimation] Timer connected");
     
 #ifdef HAVE_MALI
-     // Create a pbuffer surface and make the context current
-    EGLint pbufferAttribs[] = { EGL_WIDTH, 1, EGL_HEIGHT, 1, EGL_NONE };
-    m_eglSurface = eglCreatePbufferSurface(m_eglDisplay, m_eglConfig, pbufferAttribs);
-    if (m_eglSurface == EGL_NO_SURFACE) {
-        eDebug("[eGLSAnimation] Failed to create pbuffer surface");
+    if (!initEGL()) {
+        eDebug("[eGLSAnimation] Failed to initialize EGL!");
         return;
     }
-    
-    if (!eglMakeCurrent(m_eglDisplay, m_eglSurface, m_eglSurface, m_eglContext)) {
-        eDebug("[eGLSAnimation] eglMakeCurrent failed");
-        return;
-    }
-    initEGL();
 #endif
 }
 
@@ -88,11 +79,6 @@ void eGLSAnimation::timerTick()
         case TYPE_ZOOM:
             applyZoom(progress);
             break;
-    }
-    if (m_widget) 
-    {
-        m_widget->invalidate();
-        //gRC::getInstance()->redraw(m_widget);
     }
     
     if (m_current_tick >= m_total_ticks)
@@ -186,8 +172,7 @@ void eGLSAnimation::applyFade(float progress)
     int opacity = m_params.startValue + (m_params.endValue - m_params.startValue) * progress;
     eDebug("[eGLSAnimation] Fade: progress=%.2f, opacity=%d", progress, opacity);
     m_widget->setTransparent(100 - opacity);  // Convert opacity to transparency (0-100)
-    m_widget->invalidate();
-    //gRC::getInstance()->redraw(m_widget);
+    m_widget->invalidate();  // Mark widget as dirty
 }
 
 void eGLSAnimation::applySlide(float progress)
@@ -198,9 +183,8 @@ void eGLSAnimation::applySlide(float progress)
     int y = m_params.startPos.y() + (m_params.endPos.y() - m_params.startPos.y()) * progress;
     eDebug("[eGLSAnimation] Slide: progress=%.2f, pos=(%d,%d)", progress, x, y);
     m_widget->move(ePoint(x, y));
-
-    m_widget->invalidate();
-    //gRC::getInstance()->redraw(m_widget);
+    m_widget->invalidate();  // Mark widget as dirty
+    
     // Ensure widget is visible during slide
     if (m_current_tick == 1)
     {
@@ -239,9 +223,8 @@ void eGLSAnimation::applyZoom(float progress)
     
     m_widget->resize(eSize(newWidth, newHeight));
     m_widget->move(ePoint(newX, newY));
-
-    m_widget->invalidate();
-    //gRC::getInstance()->redraw(m_widget);
+    m_widget->invalidate();  // Mark widget as dirty
+    
     // Ensure widget is visible during zoom
     if (m_current_tick == 1)
     {
@@ -262,10 +245,13 @@ bool eGLSAnimation::initEGL()
 
     EGLint major, minor;
     if (!eglInitialize(m_eglDisplay, &major, &minor))
+    {
+        eDebug("[eGLSAnimation] Failed to initialize EGL");
         return false;
+    }
 
     const EGLint configAttribs[] = {
-        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+        EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
         EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
         EGL_RED_SIZE, 8,
         EGL_GREEN_SIZE, 8,
@@ -276,10 +262,10 @@ bool eGLSAnimation::initEGL()
 
     EGLint numConfigs;
     if (!eglChooseConfig(m_eglDisplay, configAttribs, &m_eglConfig, 1, &numConfigs))
+    {
+        eDebug("[eGLSAnimation] Failed to choose EGL config");
         return false;
-
-    // Add the debug statement here to log the chosen EGL config
-    eDebug("[eGLSAnimation] Chosen EGL config: %p", m_eglConfig);
+    }
 
     const EGLint contextAttribs[] = {
         EGL_CONTEXT_CLIENT_VERSION, 2,
@@ -293,22 +279,27 @@ bool eGLSAnimation::initEGL()
         return false;
     }
 
-    // Create a pbuffer surface and make the context current
-    EGLint pbufferAttribs[] = { EGL_WIDTH, 1, EGL_HEIGHT, 1, EGL_NONE };
+    // Create a pbuffer surface
+    const EGLint pbufferAttribs[] = {
+        EGL_WIDTH, 1,
+        EGL_HEIGHT, 1,
+        EGL_NONE
+    };
     m_eglSurface = eglCreatePbufferSurface(m_eglDisplay, m_eglConfig, pbufferAttribs);
-    if (m_eglSurface == EGL_NO_SURFACE) 
+    if (m_eglSurface == EGL_NO_SURFACE)
     {
         eDebug("[eGLSAnimation] Failed to create pbuffer surface");
         return false;
     }
-    
-    if (!eglMakeCurrent(m_eglDisplay, m_eglSurface, m_eglSurface, m_eglContext)) 
+
+    if (!eglMakeCurrent(m_eglDisplay, m_eglSurface, m_eglSurface, m_eglContext))
     {
         eDebug("[eGLSAnimation] eglMakeCurrent failed");
         return false;
     }
 
-    return createShaders();
+    eDebug("[eGLSAnimation] EGL initialized successfully");
+    return true;
 }
 
 void eGLSAnimation::cleanupEGL()
@@ -319,92 +310,72 @@ void eGLSAnimation::cleanupEGL()
         if (m_eglContext != EGL_NO_CONTEXT)
         {
             eglDestroyContext(m_eglDisplay, m_eglContext);
-            m_eglContext = EGL_NO_CONTEXT;
         }
         if (m_eglSurface != EGL_NO_SURFACE)
         {
             eglDestroySurface(m_eglDisplay, m_eglSurface);
-            m_eglSurface = EGL_NO_SURFACE;
         }
         eglTerminate(m_eglDisplay);
-        m_eglDisplay = EGL_NO_DISPLAY;
-    }
-
-    if (m_program)
-    {
-        glDeleteProgram(m_program);
-        m_program = 0;
-    }
-    if (m_texture)
-    {
-        glDeleteTextures(1, &m_texture);
-        m_texture = 0;
     }
 }
 
 bool eGLSAnimation::createShaders()
 {
-    const char *vertexShader =
-        "#version 100\n"
-        "attribute vec4 position;\n"
-        "attribute vec2 texcoord;\n"
-        "varying vec2 v_texcoord;\n"
+    const char *vertexShaderSource =
+        "attribute vec4 a_position;\n"
         "void main() {\n"
-        "    gl_Position = position;\n"
-        "    v_texcoord = texcoord;\n"
+        "    gl_Position = a_position;\n"
         "}\n";
 
-    const char *fragmentShader =
-        "#version 100\n"
+    const char *fragmentShaderSource =
         "precision mediump float;\n"
-        "varying vec2 v_texcoord;\n"
-        "uniform sampler2D texture;\n"
-        "uniform float alpha;\n"
         "void main() {\n"
-        "    vec4 color = texture2D(texture, v_texcoord);\n"
-        "    gl_FragColor = vec4(color.rgb, color.a * alpha);\n"
+        "    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);\n"
         "}\n";
 
-    GLuint vs = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vs, 1, &vertexShader, NULL);
-    glCompileShader(vs);
+    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+    glCompileShader(vertexShader);
 
-    GLint status;
-    glGetShaderiv(vs, GL_COMPILE_STATUS, &status);
-    if (status != GL_TRUE) {
+    GLint success;
+    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+    if (!success)
+    {
         char log[512];
-        glGetShaderInfoLog(vs, sizeof(log), NULL, log);
-        eDebug("[eGLSAnimation] Vertex shader compile error: %s", log);
+        glGetShaderInfoLog(vertexShader, 512, NULL, log);
+        eDebug("[eGLSAnimation] Vertex shader compilation failed: %s", log);
         return false;
     }
 
-    GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fs, 1, &fragmentShader, NULL);
-    glCompileShader(fs);
+    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+    glCompileShader(fragmentShader);
 
-    glGetShaderiv(fs, GL_COMPILE_STATUS, &status);
-    if (status != GL_TRUE) {
+    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+    if (!success)
+    {
         char log[512];
-        glGetShaderInfoLog(fs, sizeof(log), NULL, log);
-        eDebug("[eGLSAnimation] Fragment shader compile error: %s", log);
+        glGetShaderInfoLog(fragmentShader, 512, NULL, log);
+        eDebug("[eGLSAnimation] Fragment shader compilation failed: %s", log);
         return false;
     }
 
     m_program = glCreateProgram();
-    glAttachShader(m_program, vs);
-    glAttachShader(m_program, fs);
+    glAttachShader(m_program, vertexShader);
+    glAttachShader(m_program, fragmentShader);
     glLinkProgram(m_program);
 
-    glDeleteShader(vs);
-    glDeleteShader(fs);
-
-    glGetProgramiv(m_program, GL_LINK_STATUS, &status);
-    if (status != GL_TRUE) {
+    glGetProgramiv(m_program, GL_LINK_STATUS, &success);
+    if (!success)
+    {
         char log[512];
-        glGetProgramInfoLog(m_program, sizeof(log), NULL, log);
-        eDebug("[eGLSAnimation] Program link error: %s", log);
+        glGetProgramInfoLog(m_program, 512, NULL, log);
+        eDebug("[eGLSAnimation] Shader program linking failed: %s", log);
         return false;
     }
+
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
 
     return true;
 }
