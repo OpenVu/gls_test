@@ -283,9 +283,9 @@ class gRC : public iObject, public sigc::trackable
 	int m_prev_idle_count;
 
 	// Add OpenGL ES 2.0 variables
-        EGLDisplay eglDisplay;
-        EGLContext eglContext;
-        EGLSurface eglSurface;
+        static EGLDisplay eglDisplay;
+        static EGLContext eglContext;
+        static EGLSurface eglSurface;
 
         bool initGLES();
         void cleanupGLES();
@@ -466,13 +466,6 @@ public:
 	virtual void disableSpinner();
 	virtual void incrementSpinner();
 	virtual void setSpinner(eRect pos, ePtr<gPixmap> *pic, int len);
-};
-
-class gRC {
-public:
-    static EGLDisplay eglDisplay;
-    static EGLContext eglContext;
-    static EGLSurface eglSurface;
 };
 
 #endif
