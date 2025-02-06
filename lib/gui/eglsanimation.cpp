@@ -255,7 +255,10 @@ bool eGLSAnimation::initEGL()
 {
     m_eglDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
     if (m_eglDisplay == EGL_NO_DISPLAY)
+    {
+        eDebug("[eGLSAnimation] Failed to get EGL display");
         return false;
+    }
 
     EGLint major, minor;
     if (!eglInitialize(m_eglDisplay, &major, &minor))
@@ -285,7 +288,10 @@ bool eGLSAnimation::initEGL()
 
     m_eglContext = eglCreateContext(m_eglDisplay, m_eglConfig, EGL_NO_CONTEXT, contextAttribs);
     if (m_eglContext == EGL_NO_CONTEXT)
+    {
+        eDebug("[eGLSAnimation] Failed to create EGL context");
         return false;
+    }
 
     // Create a pbuffer surface and make the context current
     EGLint pbufferAttribs[] = { EGL_WIDTH, 1, EGL_HEIGHT, 1, EGL_NONE };
