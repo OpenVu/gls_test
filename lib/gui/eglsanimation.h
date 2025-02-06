@@ -37,7 +37,10 @@ struct eGLSAnimationParams {
         type(TYPE_FADE),
         startValue(0),
         endValue(100),
-        duration(1000) {}
+        duration(1000),
+        startPos(0, 0),
+        endPos(0, 0),
+        center(0, 0) {}
 };
 
 class eGLSAnimation : public iObject
@@ -88,6 +91,10 @@ public:
     PSignal0<void> animationFinished;
 
     bool isRunning() const { return m_active; }
+
+    // Additional helper methods
+    void invalidateWidget();
+    void redrawWidget();
 };
 
 #endif // __lib_gui_eglsanimation_h
