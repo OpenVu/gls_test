@@ -61,17 +61,18 @@ private:
     EGLContext m_eglContext;
     EGLSurface m_eglSurface;
     GLuint m_program;
-    GLuint m_texture;
+    GLuint m_vbo;
 #endif
 
-    void applyFade(float progress);
-    void applySlide(float progress);
-    void applyZoom(float progress);
+    //void applyFade(float progress);
+    //void applySlide(float progress);
+    //void applyZoom(float progress);
 
 #ifdef HAVE_MALI
     bool initEGL();
     void cleanupEGL();
     bool createShaders();
+    bool createGeometry();
 #endif
 
 protected:
@@ -85,6 +86,7 @@ public:
     void stop();
     void pause();
     void resume();
+    void renderFrame(float progress); // Add this line
 
     // Getter for widget
     eWidget *getWidget() const { return m_widget; }
