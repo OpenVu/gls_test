@@ -468,4 +468,11 @@ public:
 	virtual void setSpinner(eRect pos, ePtr<gPixmap> *pic, int len);
 };
 
+class gRC {
+public:
+    static EGLDisplay eglDisplay;
+    static EGLContext eglContext;
+    static EGLSurface eglSurface;
+};
+
 #endif
