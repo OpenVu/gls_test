@@ -68,18 +68,8 @@ void eGLSAnimation::timerTick()
     
     eDebug("[eGLSAnimation] Tick: %d/%d, progress=%.2f", m_current_tick, m_total_ticks, progress);
     
-    switch (m_params.type)
-    {
-        case TYPE_FADE:
-            applyFade(progress);
-            break;
-        case TYPE_SLIDE:
-            applySlide(progress);
-            break;
-        case TYPE_ZOOM:
-            applyZoom(progress);
-            break;
-    }
+    // Render the animation using OpenGL ES 2.0
+    renderFrame(progress);
     
     if (m_current_tick >= m_total_ticks)
     {
@@ -165,74 +155,6 @@ void eGLSAnimation::resume()
     }
 }
 
-void eGLSAnimation::applyFade(float progress)
-{
-    if (!m_widget) return;
-    
-    int opacity = m_params.startValue + (m_params.endValue - m_params.startValue) * progress;
-    eDebug("[eGLSAnimation] Fade: progress=%.2f, opacity=%d", progress, opacity);
-    m_widget->setTransparent(100 - opacity);  // Convert opacity to transparency (0-100)
-    m_widget->invalidate();  // Mark widget as dirty
-}
-
-void eGLSAnimation::applySlide(float progress)
-{
-    if (!m_widget) return;
-    
-    int x = m_params.startPos.x() + (m_params.endPos.x() - m_params.startPos.x()) * progress;
-    int y = m_params.startPos.y() + (m_params.endPos.y() - m_params.startPos.y()) * progress;
-    eDebug("[eGLSAnimation] Slide: progress=%.2f, pos=(%d,%d)", progress, x, y);
-    m_widget->move(ePoint(x, y));
-    m_widget->invalidate();  // Mark widget as dirty
-    
-    // Ensure widget is visible during slide
-    if (m_current_tick == 1)
-    {
-        eDebug("[eGLSAnimation] Making widget visible for slide");
-        m_widget->setTransparent(0);
-    }
-}
-
-void eGLSAnimation::applyZoom(float progress)
-{
-    if (!m_widget) return;
-    
-    float scale = (m_params.startValue + (m_params.endValue - m_params.startValue) * progress) / 100.0f;
-    
-    ePoint widgetPos = m_widget->position();
-    eSize widgetSize = m_widget->size();
-    
-    // Calculate center if not specified
-    ePoint center = m_params.center;
-    if (center.x() == 0 && center.y() == 0)
-    {
-        center = ePoint(
-            widgetPos.x() + widgetSize.width() / 2,
-            widgetPos.y() + widgetSize.height() / 2
-        );
-    }
-    
-    // Calculate new position and size
-    int newWidth = widgetSize.width() * scale;
-    int newHeight = widgetSize.height() * scale;
-    int newX = center.x() - (newWidth / 2);
-    int newY = center.y() - (newHeight / 2);
-    
-    eDebug("[eGLSAnimation] Zoom: progress=%.2f, scale=%.2f, size=(%d,%d), pos=(%d,%d)", 
-           progress, scale, newWidth, newHeight, newX, newY);
-    
-    m_widget->resize(eSize(newWidth, newHeight));
-    m_widget->move(ePoint(newX, newY));
-    m_widget->invalidate();  // Mark widget as dirty
-    
-    // Ensure widget is visible during zoom
-    if (m_current_tick == 1)
-    {
-        eDebug("[eGLSAnimation] Making widget visible for zoom");
-        m_widget->setTransparent(0);
-    }
-}
-
 #ifdef HAVE_MALI
 bool eGLSAnimation::initEGL()
 {
@@ -249,6 +171,9 @@ bool eGLSAnimation::initEGL()
         eDebug("[eGLSAnimation] Failed to initialize EGL");
         return false;
     }
+
+    eDebug("[eGLSAnimation] EGL initialized: version %d.%d", major, minor);
+    return true;
 
     const EGLint configAttribs[] = {
         EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
@@ -321,22 +246,34 @@ void eGLSAnimation::cleanupEGL()
 
 bool eGLSAnimation::createShaders()
 {
-    const char *vertexShaderSource =
-        "attribute vec4 a_position;\n"
-        "void main() {\n"
-        "    gl_Position = a_position;\n"
-        "}\n";
+    // Vertex Shader Source
+    const char *vertexShaderSource = R"(
+        attribute vec4 a_position;
+        uniform float u_scale;
+        uniform vec2 u_offset;
+        void main() {
+            vec4 pos = a_position;
+            pos.xy *= u_scale;
+            pos.xy += u_offset;
+            gl_Position = pos;
+        }
+    )";
 
-    const char *fragmentShaderSource =
-        "precision mediump float;\n"
-        "void main() {\n"
-        "    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);\n"
-        "}\n";
+    // Fragment Shader Source
+    const char *fragmentShaderSource = R"(
+        precision mediump float;
+        uniform float u_alpha;
+        void main() {
+            gl_FragColor = vec4(1.0, 0.0, 0.0, u_alpha);
+        }
+    )";
 
+    // Compile Vertex Shader
     GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
     glCompileShader(vertexShader);
 
+    // Check Vertex Shader Compilation Status
     GLint success;
     glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
     if (!success)
@@ -347,10 +284,12 @@ bool eGLSAnimation::createShaders()
         return false;
     }
 
+    // Compile Fragment Shader
     GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
     glCompileShader(fragmentShader);
 
+    // Check Fragment Shader Compilation Status
     glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
     if (!success)
     {
@@ -360,11 +299,13 @@ bool eGLSAnimation::createShaders()
         return false;
     }
 
+    // Create Shader Program
     m_program = glCreateProgram();
     glAttachShader(m_program, vertexShader);
     glAttachShader(m_program, fragmentShader);
     glLinkProgram(m_program);
 
+    // Check Shader Program Linking Status
     glGetProgramiv(m_program, GL_LINK_STATUS, &success);
     if (!success)
     {
@@ -374,9 +315,78 @@ bool eGLSAnimation::createShaders()
         return false;
     }
 
+    // Clean Up Shaders
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
 
+    eDebug("[eGLSAnimation] Shaders created successfully");
     return true;
+}
+
+bool eGLSAnimation::createGeometry()
+{
+    const GLfloat vertices[] = {
+        -0.5f, -0.5f,
+         0.5f, -0.5f,
+        -0.5f,  0.5f,
+         0.5f,  0.5f
+    };
+
+    glGenBuffers(1, &m_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    eDebug("[eGLSAnimation] Geometry created successfully");
+    return true;
+}
+
+void eGLSAnimation::renderFrame(float progress)
+{
+    // Clear the screen
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    // Use the shader program
+    glUseProgram(m_program);
+
+    // Bind the vertex buffer
+    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+
+    // Enable and set up the vertex attribute
+    GLint positionAttrib = glGetAttribLocation(m_program, "a_position");
+    glEnableVertexAttribArray(positionAttrib);
+    glVertexAttribPointer(positionAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
+
+    // Apply animation based on type
+    switch (m_params.type)
+    {
+        case TYPE_FADE:
+        {
+            float alpha = m_params.startValue + (m_params.endValue - m_params.startValue) * progress;
+            glUniform1f(glGetUniformLocation(m_program, "u_alpha"), alpha / 100.0f);
+            break;
+        }
+        case TYPE_SLIDE:
+        {
+            float offsetX = m_params.startPos.x() + (m_params.endPos.x() - m_params.startPos.x()) * progress;
+            float offsetY = m_params.startPos.y() + (m_params.endPos.y() - m_params.startPos.y()) * progress;
+            glUniform2f(glGetUniformLocation(m_program, "u_offset"), offsetX, offsetY);
+            break;
+        }
+        case TYPE_ZOOM:
+        {
+            float scale = m_params.startValue + (m_params.endValue - m_params.startValue) * progress;
+            glUniform1f(glGetUniformLocation(m_program, "u_scale"), scale / 100.0f);
+            break;
+        }
+    }
+
+    // Draw the geometry
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    // Swap buffers to display the rendered frame
+    eglSwapBuffers(m_eglDisplay, m_eglSurface);
+
+    eDebug("[eGLSAnimation] Frame rendered with progress: %.2f", progress);
 }
 #endif
