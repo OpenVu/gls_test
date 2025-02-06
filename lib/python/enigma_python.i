@@ -56,6 +56,7 @@ is usually caused by not marking PSignals as immutable.
 #include <lib/gdi/grc.h>
 #include <lib/gdi/gmaindc.h>
 #include <lib/gui/ewidget.h>
+#include <lib/gui/eglsanimation.h>
 #include <lib/gui/elabel.h>
 #include <lib/gui/einput.h>
 #include <lib/gui/einputstring.h>
@@ -209,6 +210,7 @@ typedef long time_t;
 %include <lib/gdi/erect.h>
 %include <lib/gdi/esize.h>
 %include <lib/gui/ewidget.h>
+%include <lib/gui/eglsanimation.h>
 %include <lib/gui/elabel.h>
 %include <lib/gui/einput.h>
 %include <lib/gui/einputstring.h>
@@ -263,6 +265,21 @@ typedef long time_t;
 %include <lib/gdi/picload.h>
 %include <lib/dvb/fcc.h>
 %include <lib/dvb/streamserver.h>
+
+// Animation types and parameters
+%{
+#include <lib/gui/eglsanimation.h>
+%}
+// Make the enum values available as constants
+%constant int TYPE_FADE = TYPE_FADE;
+%constant int TYPE_SLIDE = TYPE_SLIDE;
+%constant int TYPE_ZOOM = TYPE_ZOOM;
+// Allow Python to use AnimationParams
+%extend eGLSAnimationParams {
+    eGLSAnimationParams() {
+        return new eGLSAnimationParams();
+    }
+}
 
 /**************  eptr  **************/
 
