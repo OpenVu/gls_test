@@ -93,8 +93,8 @@ public:
     bool isRunning() const { return m_active; }
 
     // Additional helper methods
-    void invalidateWidget();
-    void redrawWidget();
+    //void invalidateWidget();
+    //void redrawWidget();
 };
 
 #endif // __lib_gui_eglsanimation_h
