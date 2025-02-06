@@ -25,6 +25,10 @@
 #include <lib/gdi/gfont.h>
 #include <lib/gdi/compositing.h>
 
+// Add OpenGL ES 2.0 headers
+#include <EGL/egl.h>
+#include <GLES2/gl2.h>
+
 class eTextPara;
 
 class gDC;
@@ -84,6 +88,10 @@ struct gOpcode
 		setFlush,
 		setView,
 #endif
+		// Add new opcodes for OpenGL ES 2.0
+	        glInit,
+	        glRender,
+	        glCleanup
 	} opcode;
 
 	gDC *dc;
@@ -216,6 +224,26 @@ struct gOpcode
 			eSize size;
 		} *setViewInfo;
 #endif
+		// Add new parameters for OpenGL ES 2.0
+	        struct pglInit
+	        {
+	            EGLDisplay display;
+	            EGLContext context;
+	            EGLSurface surface;
+	        } *glInit;
+	
+	        struct pglRender
+	        {
+	            GLuint program;
+	            GLuint vbo;
+	            GLfloat offset;
+	        } *glRender;
+	
+	        struct pglCleanup
+	        {
+	            GLuint program;
+	            GLuint vbo;
+	        } *glCleanup;
 	} parm;
 };
 
@@ -253,6 +281,14 @@ class gRC : public iObject, public sigc::trackable
 	ePtr<gCompositingData> m_compositing;
 
 	int m_prev_idle_count;
+
+	// Add OpenGL ES 2.0 variables
+        EGLDisplay eglDisplay;
+        EGLContext eglContext;
+        EGLSurface eglSurface;
+
+        bool initGLES();
+        void cleanupGLES();
 
 public:
 	gRC();
@@ -374,6 +410,10 @@ public:
 	void setFlush(bool val);
 	void setView(eSize size);
 #endif
+	// Add new methods for OpenGL ES 2.0
+        void glInit();
+        void glRender(GLuint program, GLuint vbo, GLfloat offset);
+        void glCleanup(GLuint program, GLuint vbo);
 };
 
 class gDC : public iObject
