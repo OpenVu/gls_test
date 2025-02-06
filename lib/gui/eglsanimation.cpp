@@ -1,5 +1,6 @@
 #include "eglsanimation.h"
 #include <lib/base/init.h>
+#include <lib/base/eerror.h>
 #include <lib/base/init_num.h>
 #include <lib/gdi/grc.h>
 
@@ -14,7 +15,6 @@ eGLSAnimation::eGLSAnimation(eWidget *widget)
     , m_active(false)
 #ifdef HAVE_MALI
     , m_eglDisplay(EGL_NO_DISPLAY)
-    , m_eglConfig()
     , m_eglContext(EGL_NO_CONTEXT)
     , m_eglSurface(EGL_NO_SURFACE)
     , m_program(0)
@@ -22,35 +22,33 @@ eGLSAnimation::eGLSAnimation(eWidget *widget)
 #endif
 {
     eDebug("[eGLSAnimation] Constructor: widget=%p", widget);
-#ifdef HAVE_MALI
-    eDebug("[eGLSAnimation] Compiled with MALI/GLES support");
-#else
-    eDebug("[eGLSAnimation] Compiled without MALI/GLES support");
-#endif
-
     if (!m_timer) {
         eDebug("[eGLSAnimation] Failed to create timer!");
         return;
     }
-
+    
     if (!m_widget) {
         eDebug("[eGLSAnimation] Invalid widget!");
         return;
     }
-
+    
     m_timer->timeout.connect(sigc::mem_fun(*this, &eGLSAnimation::timerTick));
     eDebug("[eGLSAnimation] Timer connected");
-
+    
 #ifdef HAVE_MALI
-    eDebug("[eGLSAnimation] Attempting to initialize GLES...");
-    if (initEGL()) {
-        eDebug("[eGLSAnimation] Successfully initialized GLES hardware acceleration");
-    } else {
-        eDebug("[eGLSAnimation] Failed to initialize GLES, falling back to software rendering");
-        cleanupEGL();
+     // Create a pbuffer surface and make the context current
+    EGLint pbufferAttribs[] = { EGL_WIDTH, 1, EGL_HEIGHT, 1, EGL_NONE };
+    m_eglSurface = eglCreatePbufferSurface(m_eglDisplay, m_eglConfig, pbufferAttribs);
+    if (m_eglSurface == EGL_NO_SURFACE) {
+        eDebug("[eGLSAnimation] Failed to create pbuffer surface");
+        return;
     }
-#else
-    eDebug("[eGLSAnimation] GLES support not compiled in, using software rendering");
+    
+    if (!eglMakeCurrent(m_eglDisplay, m_eglSurface, m_eglSurface, m_eglContext)) {
+        eDebug("[eGLSAnimation] eglMakeCurrent failed");
+        return;
+    }
+    initEGL();
 #endif
 }
 
@@ -73,12 +71,12 @@ void eGLSAnimation::timerTick()
 
     m_current_tick++;
     float progress = (float)m_current_tick / m_total_ticks;
-
+    
     // Apply easing (simple ease-in-out)
     progress = progress < 0.5f ? 2.0f * progress * progress : -1.0f + (4.0f - 2.0f * progress) * progress;
-
+    
     eDebug("[eGLSAnimation] Tick: %d/%d, progress=%.2f", m_current_tick, m_total_ticks, progress);
-
+    
     switch (m_params.type)
     {
         case TYPE_FADE:
@@ -91,7 +89,12 @@ void eGLSAnimation::timerTick()
             applyZoom(progress);
             break;
     }
-
+    if (m_widget) 
+    {
+        m_widget->invalidate();
+        gRC::getInstance()->redraw(m_widget);
+    }
+    
     if (m_current_tick >= m_total_ticks)
     {
         eDebug("[eGLSAnimation] Animation finished");
@@ -109,17 +112,17 @@ void eGLSAnimation::start(const eGLSAnimationParams &params)
 {
     eDebug("[eGLSAnimation] Starting animation type=%d, duration=%d, startValue=%d, endValue=%d",
            params.type, params.duration, params.startValue, params.endValue);
-
+           
     if (!m_timer) {
         eDebug("[eGLSAnimation] No timer available!");
         return;
     }
-
+    
     if (!m_widget) {
         eDebug("[eGLSAnimation] No widget available!");
         return;
     }
-
+           
     if (m_active) {
         eDebug("[eGLSAnimation] Stopping previous animation");
         stop();
@@ -128,14 +131,14 @@ void eGLSAnimation::start(const eGLSAnimationParams &params)
     m_params = params;
     m_current_tick = 0;
     m_total_ticks = params.duration / 16;  // 60fps
-
+    
     if (m_total_ticks <= 0) {
         eDebug("[eGLSAnimation] Invalid duration, must be > 16ms");
         return;
     }
-
+    
     m_active = true;
-
+    
     // Start timer for animation updates
     eDebug("[eGLSAnimation] Starting timer with interval=16ms, total_ticks=%d", m_total_ticks);
     m_timer->start(16);  // Start with 16ms interval
@@ -179,48 +182,25 @@ void eGLSAnimation::resume()
 void eGLSAnimation::applyFade(float progress)
 {
     if (!m_widget) return;
-
-    // Add smooth easing for fade
-    float easedProgress = progress < 0.5f ? 
-        2 * progress * progress :
-        1 - pow(-2 * progress + 2, 2) / 2;
-
-    // Calculate opacity (0-255 range for widget transparency)
-    int opacity = round(m_params.startValue + (m_params.endValue - m_params.startValue) * easedProgress);
-
-    // Clamp opacity between 0 and 100
-    opacity = std::max(0, std::min(100, opacity));
-
-    eDebug("[eGLSAnimation] Fade: progress=%.2f, eased=%.2f, opacity=%d", 
-           progress, easedProgress, opacity);
-
-    // Convert opacity (0-100) to transparency (0-255)
-    int transparency = (100 - opacity) * 255 / 100;
-    m_widget->setTransparent(transparency);
-
-    // Force immediate redraw
+    
+    int opacity = m_params.startValue + (m_params.endValue - m_params.startValue) * progress;
+    eDebug("[eGLSAnimation] Fade: progress=%.2f, opacity=%d", progress, opacity);
+    m_widget->setTransparent(100 - opacity);  // Convert opacity to transparency (0-100)
     m_widget->invalidate();
+    gRC::getInstance()->redraw(m_widget);
 }
 
 void eGLSAnimation::applySlide(float progress)
 {
     if (!m_widget) return;
-
-    // Add cubic easing for smoother slide
-    float easedProgress = progress < 0.5f ? 
-        4 * progress * progress * progress :
-        1 - pow(-2 * progress + 2, 3) / 2;
-
-    // Use rounded integer positions to avoid sub-pixel rendering glitches
-    int x = round(m_params.startPos.x() + (m_params.endPos.x() - m_params.startPos.x()) * easedProgress);
-    int y = round(m_params.startPos.y() + (m_params.endPos.y() - m_params.startPos.y()) * easedProgress);
-
-    eDebug("[eGLSAnimation] Slide: progress=%.2f, eased=%.2f, pos=(%d,%d)", 
-           progress, easedProgress, x, y);
-
-    // Apply position change
+    
+    int x = m_params.startPos.x() + (m_params.endPos.x() - m_params.startPos.x()) * progress;
+    int y = m_params.startPos.y() + (m_params.endPos.y() - m_params.startPos.y()) * progress;
+    eDebug("[eGLSAnimation] Slide: progress=%.2f, pos=(%d,%d)", progress, x, y);
     m_widget->move(ePoint(x, y));
 
+    m_widget->invalidate();
+    gRC::getInstance()->redraw(m_widget);
     // Ensure widget is visible during slide
     if (m_current_tick == 1)
     {
@@ -232,17 +212,12 @@ void eGLSAnimation::applySlide(float progress)
 void eGLSAnimation::applyZoom(float progress)
 {
     if (!m_widget) return;
-
-    // Add smoother easing for zoom
-    float easedProgress = progress < 0.5f ? 
-        4 * progress * progress * progress :
-        1 - pow(-2 * progress + 2, 3) / 2;
-
-    float scale = (m_params.startValue + (m_params.endValue - m_params.startValue) * easedProgress) / 100.0f;
-
+    
+    float scale = (m_params.startValue + (m_params.endValue - m_params.startValue) * progress) / 100.0f;
+    
     ePoint widgetPos = m_widget->position();
     eSize widgetSize = m_widget->size();
-
+    
     // Calculate center if not specified
     ePoint center = m_params.center;
     if (center.x() == 0 && center.y() == 0)
@@ -252,21 +227,21 @@ void eGLSAnimation::applyZoom(float progress)
             widgetPos.y() + widgetSize.height() / 2
         );
     }
-
-    // Calculate new position and size with smoother interpolation
-    int originalWidth = widgetSize.width() / (m_current_tick == 0 ? 1.0f : scale);
-    int originalHeight = widgetSize.height() / (m_current_tick == 0 ? 1.0f : scale);
-    int newWidth = originalWidth * scale;
-    int newHeight = originalHeight * scale;
+    
+    // Calculate new position and size
+    int newWidth = widgetSize.width() * scale;
+    int newHeight = widgetSize.height() * scale;
     int newX = center.x() - (newWidth / 2);
     int newY = center.y() - (newHeight / 2);
-
-    eDebug("[eGLSAnimation] Zoom: progress=%.2f, eased=%.2f, scale=%.2f, size=(%d,%d), pos=(%d,%d)", 
-           progress, easedProgress, scale, newWidth, newHeight, newX, newY);
-
+    
+    eDebug("[eGLSAnimation] Zoom: progress=%.2f, scale=%.2f, size=(%d,%d), pos=(%d,%d)", 
+           progress, scale, newWidth, newHeight, newX, newY);
+    
     m_widget->resize(eSize(newWidth, newHeight));
     m_widget->move(ePoint(newX, newY));
 
+    m_widget->invalidate();
+    gRC::getInstance()->redraw(m_widget);
     // Ensure widget is visible during zoom
     if (m_current_tick == 1)
     {
@@ -278,20 +253,13 @@ void eGLSAnimation::applyZoom(float progress)
 #ifdef HAVE_MALI
 bool eGLSAnimation::initEGL()
 {
-    eDebug("[eGLSAnimation] initEGL: Getting display...");
     m_eglDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-    if (m_eglDisplay == EGL_NO_DISPLAY) {
-        eDebug("[eGLSAnimation] initEGL: Failed to get display");
+    if (m_eglDisplay == EGL_NO_DISPLAY)
         return false;
-    }
 
-    eDebug("[eGLSAnimation] initEGL: Initializing EGL...");
     EGLint major, minor;
-    if (!eglInitialize(m_eglDisplay, &major, &minor)) {
-        eDebug("[eGLSAnimation] initEGL: Failed to initialize EGL");
+    if (!eglInitialize(m_eglDisplay, &major, &minor))
         return false;
-    }
-    eDebug("[eGLSAnimation] initEGL: EGL version %d.%d", major, minor);
 
     const EGLint configAttribs[] = {
         EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
@@ -303,26 +271,34 @@ bool eGLSAnimation::initEGL()
         EGL_NONE
     };
 
-    eDebug("[eGLSAnimation] initEGL: Choosing config...");
     EGLint numConfigs;
-    if (!eglChooseConfig(m_eglDisplay, configAttribs, &m_eglConfig, 1, &numConfigs)) {
-        eDebug("[eGLSAnimation] initEGL: Failed to choose config");
+    if (!eglChooseConfig(m_eglDisplay, configAttribs, &m_eglConfig, 1, &numConfigs))
         return false;
-    }
 
     const EGLint contextAttribs[] = {
         EGL_CONTEXT_CLIENT_VERSION, 2,
         EGL_NONE
     };
 
-    eDebug("[eGLSAnimation] initEGL: Creating context...");
     m_eglContext = eglCreateContext(m_eglDisplay, m_eglConfig, EGL_NO_CONTEXT, contextAttribs);
-    if (m_eglContext == EGL_NO_CONTEXT) {
-        eDebug("[eGLSAnimation] initEGL: Failed to create context");
+    if (m_eglContext == EGL_NO_CONTEXT)
+        return false;
+
+    // Create a pbuffer surface and make the context current
+    EGLint pbufferAttribs[] = { EGL_WIDTH, 1, EGL_HEIGHT, 1, EGL_NONE };
+    m_eglSurface = eglCreatePbufferSurface(m_eglDisplay, m_eglConfig, pbufferAttribs);
+    if (m_eglSurface == EGL_NO_SURFACE) 
+    {
+        eDebug("[eGLSAnimation] Failed to create pbuffer surface");
+        return false;
+    }
+    
+    if (!eglMakeCurrent(m_eglDisplay, m_eglSurface, m_eglSurface, m_eglContext)) 
+    {
+        eDebug("[eGLSAnimation] eglMakeCurrent failed");
         return false;
     }
 
-    eDebug("[eGLSAnimation] initEGL: Creating shaders...");
     return createShaders();
 }
 
@@ -330,6 +306,7 @@ void eGLSAnimation::cleanupEGL()
 {
     if (m_eglDisplay != EGL_NO_DISPLAY)
     {
+        eglMakeCurrent(m_eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
         if (m_eglContext != EGL_NO_CONTEXT)
         {
             eglDestroyContext(m_eglDisplay, m_eglContext);
@@ -359,6 +336,7 @@ void eGLSAnimation::cleanupEGL()
 bool eGLSAnimation::createShaders()
 {
     const char *vertexShader =
+        "#version 100\n"
         "attribute vec4 position;\n"
         "attribute vec2 texcoord;\n"
         "varying vec2 v_texcoord;\n"
@@ -368,6 +346,7 @@ bool eGLSAnimation::createShaders()
         "}\n";
 
     const char *fragmentShader =
+        "#version 100\n"
         "precision mediump float;\n"
         "varying vec2 v_texcoord;\n"
         "uniform sampler2D texture;\n"
@@ -381,9 +360,26 @@ bool eGLSAnimation::createShaders()
     glShaderSource(vs, 1, &vertexShader, NULL);
     glCompileShader(vs);
 
+    GLint status;
+    glGetShaderiv(vs, GL_COMPILE_STATUS, &status);
+    if (status != GL_TRUE) {
+        char log[512];
+        glGetShaderInfoLog(vs, sizeof(log), NULL, log);
+        eDebug("[eGLSAnimation] Vertex shader compile error: %s", log);
+        return false;
+    }
+
     GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fs, 1, &fragmentShader, NULL);
     glCompileShader(fs);
+
+    glGetShaderiv(fs, GL_COMPILE_STATUS, &status);
+    if (status != GL_TRUE) {
+        char log[512];
+        glGetShaderInfoLog(fs, sizeof(log), NULL, log);
+        eDebug("[eGLSAnimation] Fragment shader compile error: %s", log);
+        return false;
+    }
 
     m_program = glCreateProgram();
     glAttachShader(m_program, vs);
@@ -392,6 +388,14 @@ bool eGLSAnimation::createShaders()
 
     glDeleteShader(vs);
     glDeleteShader(fs);
+
+    glGetProgramiv(m_program, GL_LINK_STATUS, &status);
+    if (status != GL_TRUE) {
+        char log[512];
+        glGetProgramInfoLog(m_program, sizeof(log), NULL, log);
+        eDebug("[eGLSAnimation] Program link error: %s", log);
+        return false;
+    }
 
     return true;
 }
