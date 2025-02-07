@@ -190,6 +190,7 @@ bool eGLSAnimation::initEGL()
         eDebug("[eGLSAnimation] Failed to choose EGL config");
         return false;
     }
+    eDebug("[eGLSAnimation] EGL config chosen: numConfigs=%d", numConfigs);
 
     const EGLint contextAttribs[] = {
         EGL_CONTEXT_CLIENT_VERSION, 2,
@@ -341,6 +342,13 @@ bool eGLSAnimation::createGeometry()
 
 void eGLSAnimation::renderFrame(float progress)
 {
+    // Log the widget's position
+    ePoint pos = m_widget->position();
+    eDebug("[eGLSAnimation] Widget position: x=%d, y=%d", pos.x(), pos.y());
+
+    // Force redraw
+    m_widget->invalidate();
+    
     // Clear the screen
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
