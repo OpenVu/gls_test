@@ -160,6 +160,17 @@ void eGLSAnimation::resume()
 #ifdef HAVE_MALI
 bool eGLSAnimation::initEGL()
 {
+    // Check for EGL extensions
+    const char *extensions = eglQueryString(m_eglDisplay, EGL_EXTENSIONS);
+    if (strstr(extensions, "EGL_KHR_surfaceless_context") != nullptr)
+    {
+        eDebug("[eGLSAnimation] Hardware acceleration is supported");
+    }
+    else
+    {
+        eDebug("[eGLSAnimation] Hardware acceleration is not supported");
+    }
+    
     m_eglDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
     if (m_eglDisplay == EGL_NO_DISPLAY)
     {
