@@ -79,7 +79,7 @@ void eGLSAnimation::timerTick()
     else
     {
         // Introduce a delay to control frame rate
-        usleep(16000); // Approx 60 FPS
+        //usleep(16000); // Approx 60 FPS
 
         // Schedule next tick only if we haven't finished
         m_timer->start(16);
@@ -177,13 +177,23 @@ bool eGLSAnimation::initEGL()
     eDebug("[eGLSAnimation] EGL initialized: version %d.%d", major, minor);
     return true;
 
+    //const EGLint configAttribs[] = {
+        //EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
+        //EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+        //EGL_RED_SIZE, 8,
+        //EGL_GREEN_SIZE, 8,
+        //EGL_BLUE_SIZE, 8,
+        //EGL_ALPHA_SIZE, 8,
+        //EGL_NONE
     const EGLint configAttribs[] = {
-        EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
+        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,  // Use window surface instead of pbuffer
         EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
         EGL_RED_SIZE, 8,
         EGL_GREEN_SIZE, 8,
         EGL_BLUE_SIZE, 8,
         EGL_ALPHA_SIZE, 8,
+        EGL_DEPTH_SIZE, 16,  // Add depth buffer
+        EGL_STENCIL_SIZE, 8, // Add stencil buffer
         EGL_NONE
     };
 
