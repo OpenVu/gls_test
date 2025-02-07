@@ -342,6 +342,10 @@ bool eGLSAnimation::createGeometry()
 
 void eGLSAnimation::renderFrame(float progress)
 {
+    // Calculate new position
+    ePoint newPos = calculateNewPosition(progress); // Implement this function
+    m_widget->move(newPos);
+    
     // Log the widget's position
     ePoint pos = m_widget->position();
     eDebug("[eGLSAnimation] Widget position: x=%d, y=%d", pos.x(), pos.y());
