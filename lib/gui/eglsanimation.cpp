@@ -192,6 +192,7 @@ bool eGLSAnimation::initEGL()
         EGL_BLUE_SIZE, 8,
         EGL_ALPHA_SIZE, 8,
         EGL_DEPTH_SIZE, 16,
+        EGL_DOUBLE_BUFFER, EGL_TRUE,  // Ensure double buffering is enabled
         EGL_NONE
     };
     EGLint numConfigs;
@@ -304,11 +305,12 @@ void eGLSAnimation::renderFrame(float progress)
     
     // Move the widget to the new position
     m_widget->move(newPos);
-    // Log the widget's position after moving
+
     ePoint currentPos = m_widget->position();
     eDebug("[eGLSAnimation] Widget position after move: x=%d, y=%d", currentPos.x(), currentPos.y());
+    
     // Force redraw
-    m_widget->invalidate();
+    //m_widget->invalidate();
     
     // Clear the screen
     glClear(GL_COLOR_BUFFER_BIT);
@@ -320,7 +322,7 @@ void eGLSAnimation::renderFrame(float progress)
     glUniform1f(m_offsetUniform, offset);
 
     // Draw the rectangle
-    glDrawArrays(GL_TRIANGLES, 0, 6);
+    //glDrawArrays(GL_TRIANGLES, 0, 6);
 
     // Swap buffers
     eglSwapBuffers(m_eglDisplay, m_eglSurface);
