@@ -77,6 +77,7 @@ public:
     void stop();
     void pause();
     void resume();
+    
     void renderFrame(float progress);
 
     // Getter for widget
@@ -91,6 +92,8 @@ private:
     void cleanupEGL();
     GLuint compileShader(GLenum type, const char* source);
     void initShaders();
+    // Declare the getWidgetTexture function
+    GLuint getWidgetTexture(eWidget *widget);
 #endif
 };
 
