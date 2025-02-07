@@ -18,7 +18,6 @@ eGLSAnimation::eGLSAnimation(eWidget *widget)
     , m_eglContext(EGL_NO_CONTEXT)
     , m_eglSurface(EGL_NO_SURFACE)
     , m_program(0)
-    , m_texture(0)
 #endif
 {
     eDebug("[eGLSAnimation] Constructor: widget=%p", widget);
