@@ -271,6 +271,10 @@ void eGLSAnimation::initShaders()
     glLinkProgram(m_program);
     glUseProgram(m_program);
 
+    // Enable Blending for Transparency
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     // Get attribute and uniform locations
     m_positionAttrib = glGetAttribLocation(m_program, "a_position");
     m_offsetUniform = glGetUniformLocation(m_program, "u_offset");
@@ -284,9 +288,10 @@ void eGLSAnimation::initShaders()
     glEnableVertexAttribArray(m_positionAttrib);
     glVertexAttribPointer(m_positionAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
-    // Set clear color
-    glClearColor(0.0, 0.0, 1.0, 1.0); // Blue background
+    // Set clear color for transparent background
+    glClearColor(0.0, 0.0, 0.0, 0.0); // Transparent
 }
+
 
 void eGLSAnimation::renderFrame(float progress)
 {
@@ -300,7 +305,7 @@ void eGLSAnimation::renderFrame(float progress)
     glUniform1f(m_offsetUniform, offset);
 
     // Draw the rectangle
-    glDrawArrays(GL_TRIANGLES, 0, 6);
+    //glDrawArrays(GL_TRIANGLES, 0, 6);
 
     // Swap buffers
     eglSwapBuffers(m_eglDisplay, m_eglSurface);
