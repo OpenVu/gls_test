@@ -85,10 +85,7 @@ void eGLSAnimation::timerTick()
     }
 
     m_current_tick++;
-    float progress = (float)m_current_tick / m_total_ticks;
-
-    // Apply easing (simple ease-in-out)
-    progress = progress < 0.5f ? 2.0f * progress * progress : -1.0f + (4.0f - 2.0f * progress) * progress;
+    float progress = (float)m_current_tick / m_total_ticks; // Linear progress
 
     // Render the frame
     renderFrame(progress);
@@ -99,7 +96,7 @@ void eGLSAnimation::timerTick()
         /*emit*/ animationFinished();
     } else {
         // Schedule next tick
-        m_timer->start(16); // 16ms for ~60fps
+        m_timer->start(4); // 4ms for ~240fps
     }
 }
 
@@ -107,17 +104,17 @@ void eGLSAnimation::start(const eGLSAnimationParams &params)
 {
     eDebug("[eGLSAnimation] Starting animation type=%d, duration=%d, startValue=%d, endValue=%d",
            params.type, params.duration, params.startValue, params.endValue);
-           
+
     if (!m_timer) {
         eDebug("[eGLSAnimation] No timer available!");
         return;
     }
-    
+
     if (!m_widget) {
         eDebug("[eGLSAnimation] No widget available!");
         return;
     }
-           
+
     if (m_active) {
         eDebug("[eGLSAnimation] Stopping previous animation");
         stop();
@@ -125,18 +122,18 @@ void eGLSAnimation::start(const eGLSAnimationParams &params)
 
     m_params = params;
     m_current_tick = 0;
-    m_total_ticks = params.duration / 16;  // 60fps
-    
+    m_total_ticks = params.duration / 4;  // 240fps
+
     if (m_total_ticks <= 0) {
-        eDebug("[eGLSAnimation] Invalid duration, must be > 16ms");
+        eDebug("[eGLSAnimation] Invalid duration, must be > 4ms");
         return;
     }
-    
+
     m_active = true;
-    
+
     // Start timer for animation updates
-    eDebug("[eGLSAnimation] Starting timer with interval=16ms, total_ticks=%d", m_total_ticks);
-    m_timer->start(16);  // Start with 16ms interval
+    eDebug("[eGLSAnimation] Starting timer with interval=4ms, total_ticks=%d", m_total_ticks);
+    m_timer->start(4);  // Start with 4ms interval
     eDebug("[eGLSAnimation] Timer started");
 }
 
