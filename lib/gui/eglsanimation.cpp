@@ -2,6 +2,10 @@
 #include <lib/base/eerror.h>
 #include <lib/gdi/grc.h>
 
+#ifndef EGL_DOUBLE_BUFFER
+#define EGL_DOUBLE_BUFFER 0x3052
+#endif
+
 // Shader source code
 const char* vertexShaderSource = R"(
     attribute vec2 a_position;
