@@ -8,10 +8,11 @@
 #include <vuplus_gles.h>
 #endif
 
+#ifdef HAVE_MALI
 // Add OpenGL ES 2.0 headers
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
-
+#endif
 
 #ifndef SYNC_PAINT
 void *gRC::thread_wrapper(void *ptr)
@@ -22,10 +23,12 @@ void *gRC::thread_wrapper(void *ptr)
 
 gRC *gRC::instance = 0;
 
+#ifdef HAVE_MALI
 // Add OpenGL ES 2.0 variables
 EGLDisplay gRC::eglDisplay = EGL_NO_DISPLAY;
 EGLContext gRC::eglContext = EGL_NO_CONTEXT;
 EGLSurface gRC::eglSurface = EGL_NO_SURFACE;
+#endif
 
 gRC::gRC() : rp(0), wp(0)
 #ifdef SYNC_PAINT
@@ -43,11 +46,13 @@ gRC::gRC() : rp(0), wp(0)
 	m_spinneronoff = 1;
 	CONNECT(m_notify_pump.recv_msg, gRC::recv_notify);
 
+#ifdef HAVE_MALI	
 	// Initialize OpenGL ES 2.0
         if (!initGLES()) 
 		{
 		eFatal("[gRC] Failed to initialize OpenGL ES 2.0");
 	        }
+#endif	
 #ifndef SYNC_PAINT
 	pthread_mutex_init(&mutex, 0);
 	pthread_cond_init(&cond, 0);
@@ -64,6 +69,7 @@ gRC::gRC() : rp(0), wp(0)
 #endif
 }
 
+#ifdef HAVE_MALI
 bool gRC::initGLES() {
     eglDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
     if (eglDisplay == EGL_NO_DISPLAY) {
@@ -132,6 +138,7 @@ void gRC::cleanupGLES() {
         eglTerminate(eglDisplay);
     }
 }
+#endif
 
 #ifdef CONFIG_ION
 void gRC::lock()
@@ -157,9 +164,10 @@ gRC::~gRC()
 	gOpcode o;
 	o.opcode = gOpcode::shutdown;
 	submit(o);
-
+#ifdef HAVE_MALI
 	// Clean up OpenGL ES 2.0
         cleanupGLES();
+#endif	
 	
 #ifndef SYNC_PAINT
 	eDebug("[gRC] Waiting for gRC thread shutdown.");
