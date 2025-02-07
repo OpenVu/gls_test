@@ -289,120 +289,42 @@ void eGLSAnimation::initShaders()
     glVertexAttribPointer(m_positionAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
     // Set clear color for transparent background
-    glClearColor(0.0, 0.0, 0.0, 0.0); // Transparent
-}
-
-GLuint eGLSAnimation::getWidgetTexture(eWidget *widget)
-{
-    if (!widget) {
-        return 0; // Invalid widget
-    }
-
-    // Get the widget's size
-    eSize widgetSize = widget->size();
-    int width = widgetSize.width();
-    int height = widgetSize.height();
-
-    if (width <= 0 || height <= 0) {
-        return 0; // Invalid size
-    }
-
-    // Generate and bind a texture
-    GLuint textureID;
-    glGenTextures(1, &textureID);
-    glBindTexture(GL_TEXTURE_2D, textureID);
-
-    // Set texture parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-    // Allocate texture storage
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-
-    // Create an FBO
-    GLuint fboID;
-    glGenFramebuffers(1, &fboID);
-    glBindFramebuffer(GL_FRAMEBUFFER, fboID);
-
-    // Attach the texture to the FBO
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureID, 0);
-
-    // Check FBO completeness
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        eDebug("[eGLSAnimation] FBO is not complete!");
-        glDeleteFramebuffers(1, &fboID);
-        glDeleteTextures(1, &textureID);
-        return 0;
-    }
-
-    // Set up the viewport
-    glViewport(0, 0, width, height);
-
-    // Clear the FBO
-    glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Transparent background
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    // Render the widget into the FBO
-    gPainter painter(nullptr, width, height, 32); // Create a painter for off-screen rendering
-    gRegion region(eRect(0, 0, width, height));
-    widget->doPaint(painter, region, widget->getLayer());
-
-    // Unbind the FBO
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    // Clean up the FBO
-    glDeleteFramebuffers(1, &fboID);
-
-    return textureID;
+    //glClearColor(0.0, 0.0, 0.0, 0.0); // Transparent
 }
 
 void eGLSAnimation::renderFrame(float progress)
 {
-    if (!m_widget) {
-        eDebug("[eGLSAnimation] No widget to render!");
-        return;
-    }
-
-    // Calculate new position for the widget
+    // Calculate new position
     ePoint startPos = m_params.startPos;
     ePoint endPos = m_params.endPos;
     ePoint newPos(startPos.x() + (endPos.x() - startPos.x()) * progress,
                   startPos.y() + (endPos.y() - startPos.y()) * progress);
-
     // Log the new position
     eDebug("[eGLSAnimation] New position calculated: x=%d, y=%d", newPos.x(), newPos.y());
+    
+    // Move the widget to the new position
+    m_widget->move(newPos);
+    // Log the widget's position after moving
+    ePoint currentPos = m_widget->position();
+    eDebug("[eGLSAnimation] Widget position after move: x=%d, y=%d", currentPos.x(), currentPos.y());
+    // Force redraw
+    m_widget->invalidate();
+    
+    // Clear the screen
+    glClear(GL_COLOR_BUFFER_BIT);
 
-    // Get the widget's texture
-    GLuint widgetTexture = getWidgetTexture(m_widget);
-    if (!widgetTexture) {
-        eDebug("[eGLSAnimation] Failed to get widget texture!");
-        return;
-    }
+    // Calculate offset based on progress
+    float offset = -1.0f + 2.0f * progress; // Map progress from [0, 1] to [-1, 1]
 
-    // Bind the widget's texture
-    glBindTexture(GL_TEXTURE_2D, widgetTexture);
+    // Set the offset uniform
+    glUniform1f(m_offsetUniform, offset);
 
-    // Set up the transformation matrix for the widget
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    glTranslatef(newPos.x(), newPos.y(), 0.0f); // Move the widget to the new position
-
-    // Render the widget as a textured quad
-    glBegin(GL_QUADS);
-    glTexCoord2f(0.0f, 0.0f); glVertex2f(0.0f, 0.0f);
-    glTexCoord2f(1.0f, 0.0f); glVertex2f(m_widget->size().width(), 0.0f);
-    glTexCoord2f(1.0f, 1.0f); glVertex2f(m_widget->size().width(), m_widget->size().height());
-    glTexCoord2f(0.0f, 1.0f); glVertex2f(0.0f, m_widget->size().height());
-    glEnd();
+    // Draw the rectangle
+    //glDrawArrays(GL_TRIANGLES, 0, 6);
 
     // Swap buffers
     eglSwapBuffers(m_eglDisplay, m_eglSurface);
 
     // Log frame rendering
     eDebug("[eGLSAnimation] Frame rendered with progress: %.2f", progress);
-
-    // Clean up the texture
-    glDeleteTextures(1, &widgetTexture);
 }
