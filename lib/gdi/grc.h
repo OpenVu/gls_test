@@ -25,10 +25,11 @@
 #include <lib/gdi/gfont.h>
 #include <lib/gdi/compositing.h>
 
+#ifdef HAVE_MALI
 // Add OpenGL ES 2.0 headers
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
-
+#endif
 class eTextPara;
 
 class gDC;
@@ -88,10 +89,12 @@ struct gOpcode
 		setFlush,
 		setView,
 #endif
+#ifdef HAVE_MALI
 		// Add new opcodes for OpenGL ES 2.0
 	        glInit,
 	        glRender,
 	        glCleanup
+#endif
 	} opcode;
 
 	gDC *dc;
@@ -224,6 +227,7 @@ struct gOpcode
 			eSize size;
 		} *setViewInfo;
 #endif
+#ifdef HAVE_MALI
 		// Add new parameters for OpenGL ES 2.0
 	        struct pglInit
 	        {
@@ -244,6 +248,7 @@ struct gOpcode
 	            GLuint program;
 	            GLuint vbo;
 	        } *glCleanup;
+#endif
 	} parm;
 };
 
@@ -282,6 +287,7 @@ class gRC : public iObject, public sigc::trackable
 
 	int m_prev_idle_count;
 
+#ifdef HAVE_MALI
 	// Add OpenGL ES 2.0 variables
         static EGLDisplay eglDisplay;
         static EGLContext eglContext;
@@ -289,6 +295,7 @@ class gRC : public iObject, public sigc::trackable
 
         bool initGLES();
         void cleanupGLES();
+#endif
 
 public:
 	gRC();
@@ -410,10 +417,12 @@ public:
 	void setFlush(bool val);
 	void setView(eSize size);
 #endif
+#ifdef HAVE_MALI
 	// Add new methods for OpenGL ES 2.0
         void glInit();
         void glRender(GLuint program, GLuint vbo, GLfloat offset);
         void glCleanup(GLuint program, GLuint vbo);
+#endif
 };
 
 class gDC : public iObject
