@@ -295,6 +295,22 @@ void eGLSAnimation::initShaders()
 
 void eGLSAnimation::renderFrame(float progress)
 {
+    // Calculate new position
+    ePoint startPos = m_params.startPos;
+    ePoint endPos = m_params.endPos;
+    ePoint newPos(startPos.x() + (endPos.x() - startPos.x()) * progress,
+                  startPos.y() + (endPos.y() - startPos.y()) * progress);
+    // Log the new position
+    eDebug("[eGLSAnimation] New position calculated: x=%d, y=%d", newPos.x(), newPos.y());
+    
+    // Move the widget to the new position
+    m_widget->move(newPos);
+    // Log the widget's position after moving
+    ePoint currentPos = m_widget->position();
+    eDebug("[eGLSAnimation] Widget position after move: x=%d, y=%d", currentPos.x(), currentPos.y());
+    // Force redraw
+    m_widget->invalidate();
+    
     // Clear the screen
     glClear(GL_COLOR_BUFFER_BIT);
 
