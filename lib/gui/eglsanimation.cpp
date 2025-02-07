@@ -295,33 +295,42 @@ void eGLSAnimation::initShaders()
 
 void eGLSAnimation::renderFrame(float progress)
 {
-    // Calculate new position
+    if (!m_widget) {
+        eDebug("[eGLSAnimation] No widget to render!");
+        return;
+    }
+
+    // Calculate new position for the widget
     ePoint startPos = m_params.startPos;
     ePoint endPos = m_params.endPos;
     ePoint newPos(startPos.x() + (endPos.x() - startPos.x()) * progress,
                   startPos.y() + (endPos.y() - startPos.y()) * progress);
+
     // Log the new position
     eDebug("[eGLSAnimation] New position calculated: x=%d, y=%d", newPos.x(), newPos.y());
-    
-    // Move the widget to the new position
-    m_widget->move(newPos);
-    // Log the widget's position after moving
-    ePoint currentPos = m_widget->position();
-    eDebug("[eGLSAnimation] Widget position after move: x=%d, y=%d", currentPos.x(), currentPos.y());
-    // Force redraw
-    m_widget->invalidate();
-    
+
     // Clear the screen
     glClear(GL_COLOR_BUFFER_BIT);
 
-    // Calculate offset based on progress
-    float offset = -1.0f + 2.0f * progress; // Map progress from [0, 1] to [-1, 1]
+    // Bind the widget's texture (if available)
+    // Assuming you have a method to get the widget's texture ID
+    GLuint widgetTexture = getWidgetTexture(m_widget);
+    if (widgetTexture) {
+        glBindTexture(GL_TEXTURE_2D, widgetTexture);
 
-    // Set the offset uniform
-    glUniform1f(m_offsetUniform, offset);
+        // Set up the transformation matrix for the widget
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+        glTranslatef(newPos.x(), newPos.y(), 0.0f); // Move the widget to the new position
 
-    // Draw the rectangle
-    //glDrawArrays(GL_TRIANGLES, 0, 6);
+        // Render the widget as a textured quad
+        glBegin(GL_QUADS);
+        glTexCoord2f(0.0f, 0.0f); glVertex2f(0.0f, 0.0f);
+        glTexCoord2f(1.0f, 0.0f); glVertex2f(m_widget->size().width(), 0.0f);
+        glTexCoord2f(1.0f, 1.0f); glVertex2f(m_widget->size().width(), m_widget->size().height());
+        glTexCoord2f(0.0f, 1.0f); glVertex2f(0.0f, m_widget->size().height());
+        glEnd();
+    }
 
     // Swap buffers
     eglSwapBuffers(m_eglDisplay, m_eglSurface);
