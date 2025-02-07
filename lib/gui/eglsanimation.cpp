@@ -320,7 +320,7 @@ void eGLSAnimation::renderFrame(float progress)
     glUniform1f(m_offsetUniform, offset);
 
     // Draw the rectangle
-    //glDrawArrays(GL_TRIANGLES, 0, 6);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
 
     // Swap buffers
     eglSwapBuffers(m_eglDisplay, m_eglSurface);
