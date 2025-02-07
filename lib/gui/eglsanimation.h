@@ -62,17 +62,8 @@ private:
     EGLSurface m_eglSurface;
     GLuint m_program;
     GLuint m_vbo;
-#endif
-
-    //void applyFade(float progress);
-    //void applySlide(float progress);
-    //void applyZoom(float progress);
-
-#ifdef HAVE_MALI
-    bool initEGL();
-    void cleanupEGL();
-    bool createShaders();
-    bool createGeometry();
+    GLuint m_positionAttrib;
+    GLuint m_offsetUniform;
 #endif
 
 protected:
@@ -86,13 +77,21 @@ public:
     void stop();
     void pause();
     void resume();
-    void renderFrame(float progress); // Add this line
+    void renderFrame(float progress);
 
     // Getter for widget
     eWidget *getWidget() const { return m_widget; }
     PSignal0<void> animationFinished;
 
     bool isRunning() const { return m_active; }
+
+#ifdef HAVE_MALI
+private:
+    bool initEGL();
+    void cleanupEGL();
+    GLuint compileShader(GLenum type, const char* source);
+    void initShaders();
+#endif
 };
 
 #endif // __lib_gui_eglsanimation_h
