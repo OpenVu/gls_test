@@ -78,6 +78,9 @@ void eGLSAnimation::timerTick()
     }
     else
     {
+        // Introduce a delay to control frame rate
+        usleep(16000); // Approx 60 FPS
+
         // Schedule next tick only if we haven't finished
         m_timer->start(16);
     }
